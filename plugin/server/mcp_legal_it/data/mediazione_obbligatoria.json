@@ -90,7 +90,9 @@
       "alias": [
         "responsabilita_medica_e_sanitaria",
         "responsabilita_sanitaria",
-        "responsabilita_medico_sanitaria"
+        "responsabilita_medico_sanitaria",
+        "risarcimento_del_danno_derivante_da_responsabilita_medica_e_sanitaria",
+        "risarcimento_del_danno_derivante_da_responsabilita_medica"
       ]
     },
     {
@@ -99,7 +101,11 @@
       "note": "Diffamazione a mezzo stampa o altro mezzo di pubblicità",
       "alias": [
         "diffamazione",
-        "diffamazione_a_mezzo_stampa"
+        "diffamazione_a_mezzo_stampa",
+        "diffamazione_con_il_mezzo_della_stampa",
+        "diffamazione_con_altro_mezzo_di_pubblicita",
+        "diffamazione_con_il_mezzo_della_stampa_o_con_altro_mezzo_di_pubblicita",
+        "risarcimento_del_danno_derivante_da_diffamazione_con_il_mezzo_della_stampa_o_con_altro_mezzo_di_pubblicita"
       ]
     },
     {
@@ -198,6 +204,23 @@
       "note": "L. 192/1998",
       "alias": [
         "contratto_di_subfornitura"
+      ]
+    }
+  ],
+  "voci_composte": [
+    {
+      "voce": "contratti_assicurativi_bancari_e_finanziari",
+      "materie": [
+        "contratti_assicurativi",
+        "contratti_bancari",
+        "contratti_finanziari"
+      ]
+    },
+    {
+      "voce": "risarcimento_del_danno_derivante_da_responsabilita_medica_e_sanitaria_e_da_diffamazione_con_il_mezzo_della_stampa_o_con_altro_mezzo_di_pubblicita",
+      "materie": [
+        "responsabilita_medica",
+        "diffamazione_stampa"
       ]
     }
   ],

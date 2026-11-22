@@ -212,13 +212,54 @@ class TestVerificaMediazione:
         assert _call("verifica_mediazione_obbligatoria", materia="contratti d'opera")["materia_trovata"] == "contratti_opera"
 
     def test_chiavi_della_tabella_non_si_sovrappongono(self):
-        # Dropping articles and prepositions must not make two matters share a key.
+        # Dropping articles and prepositions must not make two matters share a key,
+        # nor a composite item of art. 5 co. 1 shadow a single matter.
         from mcp_legal_it.tools.procedura_civile import _chiave_materia, _load_mediazione
 
+        tabella = _load_mediazione()
         chiavi: dict[str, str] = {}
-        for m in _load_mediazione()["materie"]:
+        for m in tabella["materie"]:
             for k in (m["nome"], *m.get("alias", [])):
                 assert chiavi.setdefault(_chiave_materia(k), m["nome"]) == m["nome"], k
+        nomi = {m["nome"] for m in tabella["materie"]}
+        for voce in tabella["voci_composte"]:
+            assert _chiave_materia(voce["voce"]) not in chiavi, voce["voce"]
+            assert set(voce["materie"]) <= nomi and len(voce["materie"]) > 1, voce
+
+    # Every item of art. 5 co. 1 D.Lgs. 28/2010 in force (read on Normattiva on 2026-11-22), in the
+    # norm's own words. The «non determinabile» note quotes the same list: a user who copies an item
+    # from it must get True, not null again.
+    _VOCI_ART_5_CO_1 = (
+        "condominio", "diritti reali", "divisione", "successioni ereditarie", "patti di famiglia",
+        "locazione", "comodato", "affitto di aziende",
+        "risarcimento del danno derivante da responsabilità medica e sanitaria",
+        "risarcimento del danno derivante da responsabilità medica e sanitaria e da diffamazione con il "
+        "mezzo della stampa o con altro mezzo di pubblicità",
+        "diffamazione con il mezzo della stampa o con altro mezzo di pubblicità",
+        "contratti assicurativi, bancari e finanziari", "associazione in partecipazione", "consorzio",
+        "franchising", "opera", "rete", "somministrazione", "società di persone", "subfornitura",
+    )
+
+    def test_ogni_voce_dell_art_5_co_1_nelle_parole_della_norma_e_obbligatoria(self):
+        nota = _call("verifica_mediazione_obbligatoria", materia="diritto_sportivo")["note"]
+        for voce in self._VOCI_ART_5_CO_1:
+            assert voce in nota, f"la nota «non determinabile» non riporta {voce!r}"
+            r = _call("verifica_mediazione_obbligatoria", materia=voce)
+            assert r["obbligatoria"] is True and r["materia_trovata"], (voce, r)
+        # Spellings of the same items that a user writes by hand
+        for voce in ("contratti assicurativi bancari e finanziari", "diffamazione con altro mezzo di pubblicità",
+                     "diffamazione con il mezzo della stampa", "Contratti assicurativi, bancari e finanziari"):
+            assert _call("verifica_mediazione_obbligatoria", materia=voce)["obbligatoria"] is True, voce
+
+    def test_voce_composta_elenca_tutte_le_materie(self):
+        r = _call("verifica_mediazione_obbligatoria", materia="contratti assicurativi, bancari e finanziari")
+        assert r["materia_trovata"] == "contratti_assicurativi, contratti_bancari, contratti_finanziari"
+        assert r["fonte"] == "originaria (2010)"
+
+    def test_sinistro_stradale_resta_fuori_elenco(self):
+        for m in ("sinistro stradale", "circolazione_stradale"):
+            r = _call("verifica_mediazione_obbligatoria", materia=m)
+            assert r["obbligatoria"] is False and "negoziazione assistita" in r["note"], m
 
 
 # ---------------------------------------------------------------------------

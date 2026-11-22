@@ -306,6 +306,14 @@ def test_art_5_co_1_dlgs_28_2010_elenco_coincide_con_la_tabella():
         assert r["obbligatoria"] is True and r["materia_trovata"] == chiave, r
 
 
+def test_nota_non_determinabile_riporta_l_elenco_vigente_dell_art_5_co_1():
+    """#195: the «non determinabile» answer quotes the list of art. 5 co. 1 for the user to check;
+    the quotation must be the text in force, word for word."""
+    nota = _mediazione("diritto_sportivo")["note"]
+    elenco = nota.split("L'elenco: ", 1)[1].rstrip(".")
+    assert normalizza(elenco) in _art_5_co(1), elenco
+
+
 def test_circolazione_stradale_fuori_dall_art_5_co_1_e_soggetta_a_negoziazione_assistita():
     """Art. 5 co. 1 D.Lgs. 28/2010 no longer lists circolazione (removed by D.L. 69/2013); art. 3 co. 1
     D.L. 132/2014 makes negoziazione assistita the condition of procedibility instead."""

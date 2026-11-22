@@ -186,7 +186,8 @@ def verifica_mediazione_obbligatoria(materia: str) -> dict:
     quelle aggiunte dalla riforma Cartabia (D.Lgs. 149/2022).
     Vigenza: Art. 5 co. 1, 5 e 6 D.Lgs. 28/2010 come modificato da D.Lgs. 149/2022 e D.Lgs. 28/2023 (testo letto su Normattiva al 2026-09-29; elenco del co. 1 riletto il 2026-11-22).
     Il confronto e' per identita' (nome o alias, senza accenti, apostrofi, articoli e preposizioni: 'contratti d'opera',
-    'contratto di opera' e 'contratti_opera' coincidono): un input vuoto o sotto i 3 caratteri, un input generico come
+    'contratto di opera' e 'contratti_opera' coincidono; ogni voce dell'art. 5 co. 1 scritta come nella norma e' riconosciuta,
+    anche 'contratti assicurativi, bancari e finanziari', che ne comprende tre): un input vuoto o sotto i 3 caratteri, un input generico come
     'contratti' e una materia non riconosciuta sono 'non determinabile' (obbligatoria=None, mai False: verificare
     l'elenco dell'art. 5 co. 1). obbligatoria=False solo per una materia nota fuori elenco (circolazione stradale).
     Precisione: ESATTO per le materie elencate; per materie di confine verificare con cite_law.
@@ -226,6 +227,19 @@ def verifica_mediazione_obbligatoria(materia: str) -> dict:
             fonte=trovata["fonte"],
             note=trovata["note"],
         )
+
+    # An item of art. 5 co. 1 written as the norm writes it may name several matters of the table
+    # at once («contratti assicurativi, bancari e finanziari»): all of them are listed.
+    for voce in data.get("voci_composte", []):
+        if materia_norm == _chiave_materia(voce["voce"]):
+            comprese = [m for m in materie if m["nome"] in voce["materie"]]
+            return _risposta(
+                obbligatoria=True,
+                materia_trovata=", ".join(m["nome"] for m in comprese),
+                fonte=", ".join(dict.fromkeys(m["fonte"] for m in comprese)),
+                note="Voce dell'art. 5 co. 1 che comprende più materie: "
+                     + "; ".join(f"{m['nome']}: {m['note']}" for m in comprese),
+            )
 
     if len(materia_norm) < 3:
         return _risposta(

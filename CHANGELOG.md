@@ -1050,9 +1050,10 @@ described in those sections, not repeated here. Upgrading from 2.x:
     fails when a route names a resource, a tool or a `tool_calcolo` the server does not register.
   - **`atto_di_precetto`.** Its first warning opened with the art. 644 c.p.c. term, which belongs to
     the decreto ingiuntivo. The warnings now give art. 481 (inefficacy after ninety days from
-    notification, suspended by an opposition until art. 627) and the content of art. 480 (term of at
-    least ten days, the parts and the date of notification of the title under penalty of nullity, the
-    over-indebtedness warning, the court competent for enforcement). `tool_calcolo` adds
+    notification, suspended by an opposition until art. 627) and the content of art. 480: the term of
+    at least ten days; under penalty of nullity, the parts and the date of notification of the title;
+    in a sentence of its own, the over-indebtedness warning, the court competent for enforcement and,
+    for a precetto the party signs personally, residence, PEC or domicilio digitale. `tool_calcolo` adds
     `interessi_corso_causa` and `interessi_acconti`, and prices the fee with `modello_notula` on the
     precetto's own D.M. 55/2014 table instead of the cognition phases of `parcella_avvocato_civile`.
   - **`decreto_ingiuntivo_ordinario` and `decreto_ingiuntivo_professionale`** price the monitorio
@@ -1074,7 +1075,9 @@ described in those sections, not repeated here. Upgrading from 2.x:
   - **`verifica_mediazione_obbligatoria`.** «contratti d'opera» answered `obbligatoria: false`
     although art. 5 co. 1 D.Lgs. 28/2010 lists «opera»: apostrophes, articles and prepositions («d'»,
     «di», «del»…) no longer count, so «contratto d'opera» and «Contratti di opera» match
-    `contratti_opera`. **Behaviour change:** a matter the tool does not recognise answers
+    `contratti_opera`, and every item of art. 5 co. 1 written in the norm's own words matches,
+    including «contratti assicurativi, bancari e finanziari», which names three matters of the table
+    at once (`materia_trovata` lists them, comma-separated). **Behaviour change:** a matter the tool does not recognise answers
     `obbligatoria: null` («non determinabile», with the list of art. 5 co. 1 to check), no longer
     `false`, which exposed the claim to improcedibility (art. 5 co. 2). `false` stays only for
     circolazione stradale, a known matter outside the list (negoziazione assistita instead). The 21
