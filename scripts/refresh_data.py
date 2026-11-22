@@ -71,7 +71,7 @@ def warn(msg: str) -> str:
 
 def fetch(url: str) -> str:
     req = urllib.request.Request(
-        url, headers={"User-Agent": "mcp-legal-it data refresher (github.com/capazme/mcp-legal-it)"}
+        url, headers={"User-Agent": "mcp-legal-it data refresher (github.com/LexCraft-IT/mcp-legal-it)"}
     )
     with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read().decode("utf-8", errors="replace")

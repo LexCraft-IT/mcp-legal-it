@@ -2,7 +2,7 @@
 
 > Guida all'installazione delle skill Legal IT e del server MCP su Codex CLI
 > e ChatGPT, tramite il bundle `legal-it-openai-skills-X.Y.Z.zip` allegato a
-> ogni [GitHub Release](https://github.com/capazme/mcp-legal-it/releases/latest).
+> ogni [GitHub Release](https://github.com/LexCraft-IT/mcp-legal-it/releases/latest).
 
 ## Cosa contiene il bundle
 

@@ -1,6 +1,6 @@
 # Fixtures from VisuaLex
 
-Copied from [VisuaLexAPI](https://github.com/capazme/VisuaLexAPI) (MPL-2.0), which
+Copied from [VisuaLexAPI](https://github.com/LexCraft-IT/lexcraft) (MPL-2.0), which
 stays their source: a change is made there first and copied here.
 
 | File | VisuaLex path | Read at | Pinned by |

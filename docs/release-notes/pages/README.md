@@ -1,7 +1,7 @@
 # GitHub Pages for 3.0 (drafts)
 
 `index.html` and `privacy.html` are the 3.0 versions of the two pages served
-from the orphan branch `gh-pages` (capazme.github.io/mcp-legal-it). They are
+from the orphan branch `gh-pages` (lexcraft-it.github.io/mcp-legal-it). They are
 here so they can be reviewed with the rest of the release material. **Do not
 publish them before the GA**: on release day copy them over the files on
 `gh-pages` (see `../checklist-3.0.0.md`).

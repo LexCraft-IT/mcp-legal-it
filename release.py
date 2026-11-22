@@ -1837,7 +1837,7 @@ def print_summary(
 
     if pushed:
         print()
-        info(f"GitHub: https://github.com/capazme/mcp-legal-it/releases/tag/v{version}")
+        info(f"GitHub: https://github.com/LexCraft-IT/mcp-legal-it/releases/tag/v{version}")
 
     if not pushed and not dry_run:
         print()
