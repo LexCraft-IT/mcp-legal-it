@@ -149,8 +149,9 @@ def interessi_legali(
 
     Args:
         capitale: Importo del capitale in euro (€)
-        data_inizio: Data inizio decorrenza interessi (formato YYYY-MM-DD)
-        data_fine: Data fine decorrenza interessi (formato YYYY-MM-DD)
+        data_inizio: Data di scadenza del pagamento o dell'evento da cui decorrono gli interessi (formato YYYY-MM-DD;
+            gli interessi decorrono dal giorno successivo: non passare il primo giorno di interessi)
+        data_fine: Data fine decorrenza interessi, inclusa (formato YYYY-MM-DD)
         tipo: Tipo di capitalizzazione: 'semplici' (default) o 'composti'
     """
     dt_inizio = _parse_date(data_inizio)
@@ -224,13 +225,16 @@ def interessi_mora(
         art. 3 c.1 D.Lgs. 192/2012. Parametro contratto_ante_2013: se omesso, la maggiorazione di sette punti si applica quando
         data_inizio e' anteriore o uguale al 31/12/2012 (la scadenza precede il 2013, quindi il contratto e' anteriore); per un contratto
         anteriore al 2013 con scadenza successiva passare contratto_ante_2013=true. Maggiorazione agroalimentare (art. 4 c.2 D.Lgs. 198/2021) non applicata.
+    Decorrenza: gli interessi moratori decorrono dal giorno successivo alla scadenza del termine per il pagamento
+        (art. 4 c.1 D.Lgs. 231/2002): data_inizio e' la data di scadenza, il primo giorno di interessi e' quello dopo.
     Precisione: ESATTO per tassi storici pubblicati dalla BCE; INDICATIVO per periodi futuri (oltre il 31/12/2026 il tasso non e' ancora noto: nessun interesse calcolato e avvertenza).
-    Chaining: → rivalutazione_monetaria() → decreto_ingiuntivo() → parcella_avvocato_civile()
+    Chaining: → decreto_ingiuntivo() → modello_notula(tipo_procedimento='decreto_ingiuntivo'). La rivalutazione non si
+        somma agli interessi moratori: e' il maggior danno dell'art. 1224 co. 2 c.c., da chiedere e provare.
 
     Args:
         capitale: Importo del credito commerciale in euro (€)
-        data_inizio: Data di decorrenza della mora (formato YYYY-MM-DD)
-        data_fine: Data di calcolo degli interessi (formato YYYY-MM-DD)
+        data_inizio: Data di scadenza del pagamento (formato YYYY-MM-DD; gli interessi decorrono dal giorno successivo)
+        data_fine: Data di calcolo degli interessi, inclusa (formato YYYY-MM-DD)
         contratto_ante_2013: True se la transazione e' stata conclusa entro il 31/12/2012 (maggiorazione 7 punti); False per 8 punti;
             omesso: dedotto da data_inizio
     """
@@ -313,8 +317,9 @@ def interessi_tasso_fisso(
     Args:
         capitale: Importo del capitale in euro (€)
         tasso_annuo: Tasso annuo percentuale (es. 3.5 per 3,5%)
-        data_inizio: Data inizio maturazione interessi (formato YYYY-MM-DD)
-        data_fine: Data fine maturazione interessi (formato YYYY-MM-DD)
+        data_inizio: Data di scadenza o dell'evento da cui decorrono gli interessi (formato YYYY-MM-DD;
+            i giorni contati sono quelli successivi: non passare il primo giorno di interessi)
+        data_fine: Data fine maturazione interessi, inclusa (formato YYYY-MM-DD)
         tipo: Tipo di capitalizzazione: 'semplici' (default) o 'composti'
     """
     dt_inizio = _parse_date(data_inizio)
@@ -547,7 +552,8 @@ def interessi_acconti(
 
     Args:
         capitale: Importo del capitale iniziale in euro (€)
-        data_inizio: Data inizio decorrenza interessi (formato YYYY-MM-DD)
+        data_inizio: Data di scadenza del pagamento o dell'evento da cui decorrono gli interessi (formato YYYY-MM-DD;
+            gli interessi decorrono dal giorno successivo: non passare il primo giorno di interessi)
         acconti: Lista di acconti intermedi, ciascuno con 'data' (YYYY-MM-DD) e 'importo' (float in €)
         data_fine: Data fine decorrenza interessi (formato YYYY-MM-DD)
         imputazione: 'interessi' (default, art. 1194: prima gli interessi) oppure 'capitale' (solo con consenso del creditore)
@@ -735,9 +741,11 @@ def interessi_corso_causa(
 ) -> dict:
     """Calcola interessi in corso di causa art. 1284 co. 4 c.c. (tasso mora D.Lgs. 231/2002 dalla citazione).
 
-    Dal giorno della domanda giudiziale (citazione) si applica il tasso di mora D.Lgs. 231/2002
+    Dalla domanda giudiziale (citazione) si applica il tasso di mora D.Lgs. 231/2002
     (BCE+8pp) invece del tasso legale ordinario, sia in corso di causa sia post-sentenza.
-    Per interessi ante-causa (prima della citazione) usare interessi_legali.
+    Il giorno della domanda non si computa: il tasso di mora si applica dal giorno successivo
+    (per lo stesso giorno vale interessi_legali, che conta la data finale).
+    Per interessi ante-causa (prima della citazione) usare interessi_legali con data_fine = data_citazione.
     Vigenza: Art. 1284 co. 4 c.c. (introdotto dall'art. 17 DL 132/2014 conv. L. 162/2014, con effetto per i
     procedimenti iniziati dall'11/12/2014, art. 17 co. 2); D.Lgs. 231/2002. Per le domande anteriori
     all'11/12/2014 si applica il saggio legale dell'art. 1284 co. 1.
@@ -745,7 +753,7 @@ def interessi_corso_causa(
 
     Args:
         capitale: Importo del credito in euro (€)
-        data_citazione: Data della domanda giudiziale/citazione (formato YYYY-MM-DD)
+        data_citazione: Data della domanda giudiziale/citazione (formato YYYY-MM-DD; il tasso di mora si applica dal giorno successivo)
         data_sentenza: Data di deposito della sentenza (formato YYYY-MM-DD)
         data_pagamento: Data di effettivo pagamento (formato YYYY-MM-DD; se None usa data_sentenza)
     """

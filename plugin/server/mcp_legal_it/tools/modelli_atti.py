@@ -1,8 +1,8 @@
 """Catalogo e dispatcher per 100 modelli di atti legali italiani.
 
 Fornisce genera_modello_atto() che restituisce i metadati necessari per comporre
-qualsiasi tipo di atto: struttura, campi, tool di calcolo da chiamare, resource
-modello da leggere, riferimenti normativi e avvertenze.
+qualsiasi tipo di atto: campi, tool di calcolo da chiamare, tool che genera la bozza
+(se esiste), riferimenti normativi e avvertenze.
 """
 
 import json
@@ -28,8 +28,9 @@ _CATEGORIE = sorted({v["categoria"] for v in _CATALOGO.values()})
 @mcp.tool(tags={"redazione", "atti"})
 @sourced("modelli_atti")
 def genera_modello_atto(tipo_atto: str, parametri: dict | None = None) -> dict:
-    """Restituisce i metadati per comporre un atto legale: struttura, campi obbligatori,
-    tool di calcolo da chiamare, resource modello da leggere, e riferimenti normativi.
+    """Restituisce i metadati per comporre un atto legale: campi obbligatori, tool di calcolo
+    da chiamare, tool che genera la bozza (se esiste), riferimenti normativi e avvertenze.
+    Per i tipi senza tool (tier 3) l'atto si compone da questi metadati: non esiste un modello testuale.
 
     Chiamare PRIMA di redigere un atto per conoscere struttura e requisiti.
     Per l'elenco completo dei tipi disponibili, chiamare con tipo_atto="catalogo".
@@ -140,9 +141,9 @@ def genera_modello_atto(tipo_atto: str, parametri: dict | None = None) -> dict:
         result["resource_modello"] = routing["resource"]
         fase = routing.get("fase", 3)
         result["istruzioni"] = (
-            f"Resource `{routing['resource']}` non ancora disponibile (Fase {fase}); "
-            "comporre l'atto manualmente seguendo la struttura e i campi indicati, "
-            "e chiamare i tool di calcolo indicati."
+            "Nessun modello testuale per questo tipo di atto: comporre l'atto con i campi, "
+            "i riferimenti normativi e le avvertenze indicati qui, e chiamare i tool di calcolo indicati. "
+            f"La resource `{routing['resource']}` elenca i tipi di atto e il flusso di lavoro."
         )
         result["disponibile_da_fase"] = fase
     elif routing["tipo"] == "preventivo_procedura":

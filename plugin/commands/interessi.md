@@ -5,7 +5,7 @@ argument-hint: "[importo data_inizio data_fine tipo(legale|mora)]"
 allowed-tools: mcp__legal-it__interessi_legali, mcp__plugin_legal-it_legal-it__interessi_legali, mcp__legal-it__interessi_mora, mcp__plugin_legal-it_legal-it__interessi_mora, mcp__legal-it__rivalutazione_monetaria, mcp__plugin_legal-it_legal-it__rivalutazione_monetaria
 ---
 
-Chiedi all'utente (se non ha gia specificato): importo (capitale), data inizio decorrenza (data_inizio), data fine/calcolo (data_fine), tipo (legale o mora commerciale).
+Chiedi all'utente (se non ha gia specificato): importo (capitale), data di scadenza del pagamento o dell'evento da cui decorrono gli interessi (data_inizio: gli interessi decorrono dal giorno successivo), data fine/calcolo (data_fine), tipo (legale o mora commerciale).
 
 - **Interessi legali**: Usa `legal-it:interessi_legali` con `capitale`, `data_inizio` e `data_fine`.
 - **Interessi di mora commerciale**: Usa `legal-it:interessi_mora` (tasso BCE + 8 punti, D.Lgs. 231/2002).

@@ -660,7 +660,8 @@ def decreto_ingiuntivo(
     il reddito supera tre volte la soglia dell'art. 76; dichiarazione di valore ex art. 14 co. 2); artt. 636 e 637
     co. 3 c.p.c. per la parcella con parere dell'Ordine. Verificata al 2026-09-29.
     Precisione: INDICATIVO per la bozza (richiede completamento con dati specifici del caso).
-    Chaining: → contributo_unificato() per calcolare le spese di giustizia → parcella_avvocato_civile()
+    Chaining: → contributo_unificato() per calcolare le spese di giustizia → modello_notula(tipo_procedimento=
+        'decreto_ingiuntivo') per il compenso del monitorio sulla sua tabella, fase unica (non parcella_avvocato_civile)
 
     Args:
         creditore: Nome o ragione sociale del creditore

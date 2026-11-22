@@ -11,7 +11,7 @@ Workflow completo: interessi mora, rivalutazione, decreto ingiuntivo, parcella.
 
 ### 1. Interessi di mora
 
-Chiama `legal-it:interessi_mora` con capitale, data_inizio (decorrenza della mora) e data_fine (data di calcolo).
+Chiama `legal-it:interessi_mora` con capitale, data_inizio (data di scadenza del pagamento: gli interessi decorrono dal giorno successivo, art. 4, co. 1, D.Lgs. 231/2002) e data_fine (data di calcolo).
 
 - **Commerciale** (imprese/PA): usa `legal-it:interessi_mora` — tasso BCE + 8 punti (D.Lgs. 231/2002)
 - **Privato** (crediti tra privati): usa `legal-it:interessi_legali` — tasso legale art. 1284 c.c.
@@ -34,7 +34,7 @@ Chiama `legal-it:decreto_ingiuntivo` con l'importo del credito per verificare:
 
 ### 4. Parcella
 
-Chiama `legal-it:parcella_avvocato_civile` con valore della causa pari all'importo del credito, per fase monitoria. Indica il range compenso (minimo/medio/massimo) da D.M. 55/2014.
+Chiama `legal-it:modello_notula` con il `tipo_procedimento` del ricorso per decreto ingiuntivo, avvocato, cliente e `valore_causa` pari all'importo del credito: il monitorio si liquida sulla propria tabella del D.M. 55/2014, in fase unica, non con le fasi di un giudizio di cognizione (studio, introduttiva, istruttoria, decisionale). Indica il range compenso con `livello` min/medio/max. Nella tabella «Costi procedura» il compenso è `totale_onorari`: `totale_notula` comprende già contributo unificato e anticipazione forfettaria, da non contare due volte.
 
 ## Formato output
 
