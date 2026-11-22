@@ -37,11 +37,11 @@ In base al routing restituito:
 **Se `tool_diretto` presente:**
 Chiama il tool indicato con i parametri dell'utente + `parametri_fissi` dal catalogo.
 
-**Se `resource_modello` presente:**
-Leggi la resource indicata con ReadMcpResourceTool (server `legal-it`, uri = `resource_modello`), compila i placeholder `{campo}` con i dati, includi i calcoli.
+**Se `resource_modello` presente (tier 3, nessun tool genera la bozza):**
+Non esiste un modello testuale del singolo atto: componi l'atto con `campi_obbligatori`, `riferimenti_normativi` e `avvertenze` restituiti da `legal-it:genera_modello_atto`, e includi i calcoli. La resource indicata (`legal://riferimenti/modelli-atti-catalogo`) è il catalogo dei tipi e del flusso di lavoro, non un modello da compilare.
 
-**Se `disponibile_da_fase` > 1:**
-Usa il tool suggerito nelle `istruzioni` come approssimazione.
+**Se `disponibile_da_fase` > 1 e le `istruzioni` indicano un tool:**
+Usalo come approssimazione.
 
 ### 5. Verifica norme
 

@@ -144,14 +144,15 @@ class TestVerificaMediazione:
         assert result["obbligatoria"] is True
         assert "Cartabia" in result["fonte"]
 
-    def test_lavoro_non_obbligatoria(self):
+    def test_lavoro_non_determinabile(self):
+        # Not in the table is not «not listed»: never False for an unknown matter (#195).
         result = _call("verifica_mediazione_obbligatoria", materia="lavoro")
-        assert result["obbligatoria"] is False
+        assert result["obbligatoria"] is None
         assert result["materia_trovata"] is None
 
-    def test_appalti_non_obbligatoria(self):
+    def test_appalti_non_determinabile(self):
         result = _call("verifica_mediazione_obbligatoria", materia="appalti")
-        assert result["obbligatoria"] is False
+        assert result["obbligatoria"] is None
 
     def test_case_insensitive(self):
         result = _call("verifica_mediazione_obbligatoria", materia="CONDOMINIO")
@@ -188,10 +189,36 @@ class TestVerificaMediazione:
         assert not any("cautelar" in e.lower() for e in r["esclusioni_applicabili"])
         assert "non preclude" in r["nota_provvedimenti_urgenti"]
 
-    def test_materia_generica_non_trovata(self):
+    def test_materia_non_riconosciuta_non_determinabile(self):
+        # #195: an unknown matter is «non determinabile» with a pointer to art. 5 co. 1, never False.
         result = _call("verifica_mediazione_obbligatoria", materia="diritto_sportivo")
+        assert result["obbligatoria"] is None
+        assert result["materia_trovata"] is None
+        assert "non determinabile" in result["note"].lower()
+        assert "art. 5 co. 1" in result["note"]
+
+    def test_circolazione_stradale_resta_fuori_elenco(self):
+        # A known matter outside the list keeps False: negoziazione assistita instead (art. 3 D.L. 132/2014).
+        result = _call("verifica_mediazione_obbligatoria", materia="circolazione stradale")
         assert result["obbligatoria"] is False
-        assert "volontaria" in result["note"].lower()
+        assert "132/2014" in result["note"]
+
+    def test_apostrofi_articoli_e_preposizioni_non_contano(self):
+        # #195: «contratti d'opera» answered False although art. 5 co. 1 lists «opera».
+        for m in ("contratti d'opera", "contratto d'opera", "Contratti di opera", "contratti d’opera",
+                  "contratti opera", "CONTRATTI D'OPERA", "l'affitto di azienda"):
+            r = _call("verifica_mediazione_obbligatoria", materia=m)
+            assert r["obbligatoria"] is True, m
+        assert _call("verifica_mediazione_obbligatoria", materia="contratti d'opera")["materia_trovata"] == "contratti_opera"
+
+    def test_chiavi_della_tabella_non_si_sovrappongono(self):
+        # Dropping articles and prepositions must not make two matters share a key.
+        from mcp_legal_it.tools.procedura_civile import _chiave_materia, _load_mediazione
+
+        chiavi: dict[str, str] = {}
+        for m in _load_mediazione()["materie"]:
+            for k in (m["nome"], *m.get("alias", [])):
+                assert chiavi.setdefault(_chiave_materia(k), m["nome"]) == m["nome"], k
 
 
 # ---------------------------------------------------------------------------

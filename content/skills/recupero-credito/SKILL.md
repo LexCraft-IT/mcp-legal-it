@@ -1,7 +1,7 @@
 ---
 name: recupero-credito
 description: Usa quando l'utente ha un credito da recuperare, una fattura non pagata o vuole procedere con decreto ingiuntivo — interessi di mora, rivalutazione ISTAT, decreto ingiuntivo e parcella avvocato.
-tools: [decreto_ingiuntivo, interessi_legali, interessi_mora, parcella_avvocato_civile, rivalutazione_monetaria]
+tools: [decreto_ingiuntivo, interessi_legali, interessi_mora, modello_notula, rivalutazione_monetaria]
 prompt: {"name": "recupero_credito", "description": "Workflow completo per recupero credito: interessi, rivalutazione, decreto ingiuntivo e parcella", "args": [{"name": "importo", "type": "float"}, {"name": "tipo_credito", "type": "str"}, {"name": "data_scadenza", "type": "str"}]}
 ---
 
@@ -13,7 +13,7 @@ Workflow completo: interessi mora, rivalutazione, decreto ingiuntivo, parcella.
 
 ### 1. Interessi di mora
 
-Chiama `interessi_mora` con capitale, data_inizio (decorrenza della mora) e data_fine (data di calcolo).
+Chiama `interessi_mora` con capitale, data_inizio (data di scadenza del pagamento: gli interessi decorrono dal giorno successivo, art. 4, co. 1, D.Lgs. 231/2002) e data_fine (data di calcolo).
 
 - **Commerciale** (imprese/PA): usa `interessi_mora` — tasso BCE + 8 punti (D.Lgs. 231/2002)
 - **Privato** (crediti tra privati): usa `interessi_legali` — tasso legale art. 1284 c.c.
@@ -36,7 +36,7 @@ Chiama `decreto_ingiuntivo` con l'importo del credito per verificare:
 
 ### 4. Parcella
 
-Chiama `parcella_avvocato_civile` con valore della causa pari all'importo del credito, per fase monitoria. Indica il range compenso (minimo/medio/massimo) da D.M. 55/2014.
+Chiama `modello_notula` con il `tipo_procedimento` del ricorso per decreto ingiuntivo, avvocato, cliente e `valore_causa` pari all'importo del credito: il monitorio si liquida sulla propria tabella del D.M. 55/2014, in fase unica, non con le fasi di un giudizio di cognizione (studio, introduttiva, istruttoria, decisionale). Indica il range compenso con `livello` min/medio/max. Nella tabella «Costi procedura» il compenso è `totale_onorari`: `totale_notula` comprende già contributo unificato e anticipazione forfettaria, da non contare due volte.
 
 ## Formato output
 

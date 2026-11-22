@@ -233,7 +233,9 @@ def test_piano_atto_di_precetto_artt_479_481_e_avvertimento_art_480_co_2():
     r = _genera("atto_di_precetto")
     assert r["riferimenti_normativi"] == ["artt. 479-481 c.p.c."]
     assert r["tool_diretto"] == "atto_di_precetto"
-    assert not contiene(" ".join(r["avvertenze"]), "90 giorni", "art. 481")
+    avvertenze = " ".join(r["avvertenze"])
+    assert not contiene(avvertenze, "novanta giorni dalla sua notificazione", "art. 481", "non minore di dieci giorni")
+    assert "644" not in avvertenze  # #195: the decreto ingiuntivo's rule, not the precetto's
 
     precetto = _tool("atti_giudiziari", "atto_di_precetto")(
         creditore="Alfa S.r.l.", debitore="Mario Rossi",
@@ -251,8 +253,8 @@ def test_piano_citazione_ordinaria_art_163_bis_120_150_giorni():
     r = _genera("citazione_ordinaria")
     assert r["riferimenti_normativi"] == ["art. 163 c.p.c.", "D.Lgs. 149/2022"]
     assert not contiene(" ".join(r["avvertenze"]), "120 giorni", "150 giorni")
-    assert r["resource_modello"] == "legal://modelli-atti/introduttivi"
-    assert "non ancora disponibile" in r["istruzioni"]
+    assert r["resource_modello"] == "legal://riferimenti/modelli-atti-catalogo"
+    assert "Nessun modello testuale" in r["istruzioni"]
 
 
 # ---------------------------------------------------------------------------
@@ -339,15 +341,16 @@ def test_routing_e_tool_calcolo_puntano_a_tool_registrati():
 
 
 def test_resource_e_preventivo_procedura_dichiarati_non_disponibili():
-    """47 entries have no generator yet (30 resource entries, 17 preventivo_procedura): the tool
-    must say so instead of pointing to a resource or tool that does not exist."""
+    """Entries with no generator (34 resource entries, 14 preventivo_procedura): the tool must say
+    so and point only to a resource or tool that exists. Since #195 the resource entries name the
+    registered catalog and say that no per-type text model exists."""
     tools, resources = _superficie_mcp()
     assert "preventivo_procedura" not in tools
     for k, e in _catalogo().items():
         tipo = e["routing"]["tipo"]
         if tipo == "resource":
-            assert e["routing"]["resource"] not in resources
-            assert "non ancora disponibile" in _genera(k)["istruzioni"], k
+            assert e["routing"]["resource"] in resources, k
+            assert "Nessun modello testuale" in _genera(k)["istruzioni"], k
         elif tipo == "preventivo_procedura":
             r = _genera(k)
             assert r["tool_diretto"] == "preventivo_civile" and "approssimazione" in r["istruzioni"], k
@@ -485,8 +488,11 @@ _AVVERTENZE_CORRETTE = [
      ["ridotto alla meta' per i processi speciali previsti nel libro iv, titolo i"]),
     ("decreto_ingiuntivo_retribuzioni", ["tre volte", "art. 9 co. 1-bis"], "art. 9 DPR 115/2002",
      ["tre volte l'importo previsto dall'articolo 76"]),
-    ("atto_di_precetto", ["90 giorni", "art. 481"], "art. 481 c.p.c.", ["novanta giorni"]),
-    ("atto_di_precetto", ["60 giorni", "90 se all'estero", "art. 644"], "art. 644 c.p.c.",
+    ("atto_di_precetto", ["novanta giorni dalla sua notificazione", "art. 481", "art. 627"], "art. 481 c.p.c.",
+     ["novanta giorni dalla sua notificazione", "riprende a decorrere a norma dell'articolo 627"]),
+    ("atto_di_precetto", ["non minore di dieci giorni", "art. 482", "giudice competente per l'esecuzione"],
+     "art. 480 c.p.c.", ["termine non minore di dieci giorni", "indicazione del giudice competente per l'esecuzione"]),
+    ("decreto_ingiuntivo_ordinario", ["60 giorni", "90 se all'estero", "art. 644"], "art. 644 c.p.c.",
      ["sessanta giorni", "novanta giorni"]),
     ("termine_efficacia_titolo", ["90 giorni"], "art. 481 c.p.c.", ["novanta giorni"]),
     ("invito_negoziazione", ["30 giorni"], "art. 4 DL 132/2014", ["trenta giorni dalla ricezione"]),

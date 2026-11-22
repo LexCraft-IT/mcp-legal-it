@@ -1039,6 +1039,46 @@ described in those sections, not repeated here. Upgrading from 2.x:
   server runs without the disk cache.
 
 ### Fixed
+- **Act models and two calculators: seven findings of a drafting trial (#195).** Each norm was read on
+  the text in force on Normattiva on 2026-11-22.
+  - **Tier 3 routes named resources that do not exist.** 34 models pointed to
+    `legal://modelli-atti/{introduttivi,esecuzione,istanze,notifiche-varianti,pct,stragiudiziale}`,
+    which the server never registered («Unknown resource»). They now name
+    `legal://riferimenti/modelli-atti-catalogo`, and `genera_modello_atto` says that no per-type text
+    model exists: the act is composed from the fields, references and warnings it returns (the
+    `genera-atto` skill and the catalog say the same). `resource_modello` keeps its name. A new test
+    fails when a route names a resource, a tool or a `tool_calcolo` the server does not register.
+  - **`atto_di_precetto`.** Its first warning opened with the art. 644 c.p.c. term, which belongs to
+    the decreto ingiuntivo. The warnings now give art. 481 (inefficacy after ninety days from
+    notification, suspended by an opposition until art. 627) and the content of art. 480 (term of at
+    least ten days, the parts and the date of notification of the title under penalty of nullity, the
+    over-indebtedness warning, the court competent for enforcement). `tool_calcolo` adds
+    `interessi_corso_causa` and `interessi_acconti`, and prices the fee with `modello_notula` on the
+    precetto's own D.M. 55/2014 table instead of the cognition phases of `parcella_avvocato_civile`.
+  - **`decreto_ingiuntivo_ordinario` and `decreto_ingiuntivo_professionale`** price the monitorio
+    with `modello_notula(tipo_procedimento='decreto_ingiuntivo')`, single phase; the
+    `decreto_ingiuntivo` and `interessi_mora` chaining hints and the `recupero-credito` skill say
+    the same, and that the fee is `totale_onorari`: `totale_notula` already holds the contributo
+    unificato and the anticipazione forfettaria.
+  - **`data_inizio` of the interest tools.** `interessi_mora` counts from the day after `data_inizio`,
+    as art. 4 co. 1 D.Lgs. 231/2002 wants («dal giorno successivo alla scadenza del termine per il
+    pagamento»), but described it as the «data di decorrenza»: models passed the first day of
+    interest and lost one day per period. The parameter is now the due date, and the models that feed
+    `interessi_mora`, the `recupero-credito` skill and the `/interessi` command say so.
+    `interessi_legali`, `interessi_acconti`, `interessi_tasso_fisso` and `interessi_corso_causa` follow
+    the same day count and now describe it the same way. **No computation changed.**
+  - **`sollecito_formale_mora`** keeps `rivalutazione_monetaria` only behind a warning: on a
+    commercial credit with D.Lgs. 231/2002 interest it is the greater damage of art. 1224 co. 2 c.c.,
+    to be claimed and proved, not due when the default-interest rate was agreed, and only for the part
+    above the default interest; the two are not added.
+  - **`verifica_mediazione_obbligatoria`.** «contratti d'opera» answered `obbligatoria: false`
+    although art. 5 co. 1 D.Lgs. 28/2010 lists «opera»: apostrophes, articles and prepositions («d'»,
+    «di», «del»…) no longer count, so «contratto d'opera» and «Contratti di opera» match
+    `contratti_opera`. **Behaviour change:** a matter the tool does not recognise answers
+    `obbligatoria: null` («non determinabile», with the list of art. 5 co. 1 to check), no longer
+    `false`, which exposed the claim to improcedibility (art. 5 co. 2). `false` stays only for
+    circolazione stradale, a known matter outside the list (negoziazione assistita instead). The 21
+    matters of the table match art. 5 co. 1 in force.
 - **`cookie-audit`: the newsletter-form probe reads the form's real address (#175).** It read
   the form's `action` property, which a field named «action» inside the form hides (WordPress
   forms posting to `admin-ajax.php` have one): the probe threw on any page with such a form, and

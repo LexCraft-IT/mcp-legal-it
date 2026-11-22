@@ -607,7 +607,7 @@ descrizione di ogni tool.
 | Tool | Firma | Descrizione |
 |------|-------|-------------|
 | `esporta_atto_docx` | `esporta_atto_docx(testo: str, titolo: str = 'Atto', autore: str = '')` | Esporta un testo (atto, parere, bozza) in formato DOCX (Microsoft Word). |
-| `genera_modello_atto` | `genera_modello_atto(tipo_atto: str, parametri: dict \| None = None)` | Restituisce i metadati per comporre un atto legale: struttura, campi obbligatori, |
+| `genera_modello_atto` | `genera_modello_atto(tipo_atto: str, parametri: dict \| None = None)` | Restituisce i metadati per comporre un atto legale: campi obbligatori, tool di calcolo, tool che genera la bozza (se esiste), riferimenti normativi e avvertenze. |
 | `lista_categorie_atti` | `lista_categorie_atti()` | Restituisce le categorie di atti disponibili con il conteggio per ciascuna. |
 
 ---

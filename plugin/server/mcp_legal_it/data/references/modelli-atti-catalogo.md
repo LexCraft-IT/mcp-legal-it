@@ -69,7 +69,9 @@ TIER E ROUTING
 
 Tier 1 — Tool diretto (27 tipi): l'atto è generato chiamando un tool esistente.
 Tier 2 — Tool enhance (25 tipi): richiede enhancement dei tool esistenti (Fase 2).
-Tier 3 — Resource + LLM (34 tipi): l'LLM compone l'atto leggendo un modello da resource (Fase 3).
+Tier 3 — Composizione guidata (34 tipi): non esiste un modello testuale del singolo atto; l'LLM compone
+  l'atto con campi, riferimenti normativi e avvertenze restituiti da genera_modello_atto. La resource_modello
+  indicata è questo catalogo.
 Tier 4 — Preventivo parametrico (14 tipi): pianificato per la Fase 4 via preventivo_procedura (NON ancora disponibile); usare preventivo_civile come approssimazione nel frattempo.
 
 ═══════════════════════════════════════════════════════════
@@ -79,7 +81,7 @@ WORKFLOW TIPO
 1. genera_modello_atto(tipo_atto="decreto_ingiuntivo_ordinario")
    → Restituisce: tool_diretto="decreto_ingiuntivo", campi, calcoli necessari
 2. Raccogli i campi obbligatori dall'utente
-3. Chiama i tool_calcolo (contributo_unificato, parcella_avvocato_civile, ...)
-4. Chiama il tool_diretto o leggi la resource_modello
+3. Chiama i tool_calcolo (contributo_unificato, modello_notula, ...)
+4. Chiama il tool_diretto; per i Tier 3 componi l'atto dai metadati di genera_modello_atto
 5. Verifica norme con cite_law()
 6. Presenta l'atto completo con calcoli e checklist
