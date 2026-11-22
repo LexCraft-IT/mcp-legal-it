@@ -7,15 +7,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/capazme/mcp-legal-it/releases"><img src="https://img.shields.io/github/v/release/capazme/mcp-legal-it?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/LexCraft-IT/mcp-legal-it/releases"><img src="https://img.shields.io/github/v/release/LexCraft-IT/mcp-legal-it?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue?style=flat-square" alt="License"></a>
   <img src="https://img.shields.io/badge/python-%3E%3D3.11-3776ab?style=flat-square" alt="Python">
-  <a href="https://github.com/capazme/mcp-legal-it/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/capazme/mcp-legal-it/ci.yml?branch=develop&style=flat-square&label=CI" alt="CI"></a>
+  <a href="https://github.com/LexCraft-IT/mcp-legal-it/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/LexCraft-IT/mcp-legal-it/ci.yml?branch=develop&style=flat-square&label=CI" alt="CI"></a>
   <img src="https://img.shields.io/badge/tool-233-green?style=flat-square" alt="Tools">
 </p>
 
 <p align="center">
-  <a href="https://capazme.github.io/mcp-legal-it/"><strong>Guida all'installazione per Claude Desktop (Mac e Windows) →</strong></a>
+  <a href="https://lexcraft-it.github.io/mcp-legal-it/"><strong>Guida all'installazione per Claude Desktop (Mac e Windows) →</strong></a>
 </p>
 
 
@@ -42,7 +42,7 @@ Un avvocato che usa Claude non dovrebbe cercare manualmente testi di legge, rica
 
 ## Installazione
 
-> **Prima volta?** La [guida passo passo](https://capazme.github.io/mcp-legal-it/) porta da zero a Legal IT funzionante in Claude Desktop, su Mac e Windows, anche senza Python installato.
+> **Prima volta?** La [guida passo passo](https://lexcraft-it.github.io/mcp-legal-it/) porta da zero a Legal IT funzionante in Claude Desktop, su Mac e Windows, anche senza Python installato.
 
 > **Prerequisito unico: [`uv`](https://docs.astral.sh/uv/), versione 0.4.16 o successiva** (`uv --version`).
 > Gestisce automaticamente Python 3.12 e le dipendenze, identico su Windows/macOS/Linux.
@@ -58,7 +58,7 @@ Un avvocato che usa Claude non dovrebbe cercare manualmente testi di legge, rica
 ### Claude Desktop — file `.mcpb` (consigliato)
 
 1. Installa `uv` (vedi sopra).
-2. Scarica **`legal-it-X.Y.Z.mcpb`** dall'ultima [Release](https://github.com/capazme/mcp-legal-it/releases/latest).
+2. Scarica **`legal-it-X.Y.Z.mcpb`** dall'ultima [Release](https://github.com/LexCraft-IT/mcp-legal-it/releases/latest).
 3. In Claude Desktop: **doppio click sul file** — oppure **Impostazioni → Estensioni → Impostazioni avanzate → Sviluppatore estensioni → Installa file `.mcpb`**.
 4. Riavvia Claude. I 233 tool girano in locale.
 
@@ -88,7 +88,7 @@ I log stanno in `~/Library/Logs/Claude/` (macOS) — file `mcp-server-*.log` —
 ### Claude Code CLI
 
 ```bash
-claude plugin marketplace add capazme/mcp-legal-it
+claude plugin marketplace add LexCraft-IT/mcp-legal-it
 claude plugin install legal-it@mcp-legal-it
 ```
 
@@ -140,7 +140,7 @@ Client MCP:
 Il pacchetto espone il comando `mcp-legal-it` (stdio di default; `MCP_TRANSPORT=http|sse` con `MCP_HOST`, `MCP_PORT`, `MCP_PATH`):
 
 ```bash
-uvx --from git+https://github.com/capazme/mcp-legal-it@main mcp-legal-it
+uvx --from git+https://github.com/LexCraft-IT/mcp-legal-it@main mcp-legal-it
 ```
 
 Il server dichiara la propria versione ai client MCP (`serverInfo.version`). Le release vanno agganciate a un tag (`@vX.Y.Z`) invece che a `@main`.
@@ -148,7 +148,7 @@ Il server dichiara la propria versione ai client MCP (`serverInfo.version`). Le 
 ### Manuale (sviluppatori)
 
 ```bash
-git clone https://github.com/capazme/mcp-legal-it
+git clone https://github.com/LexCraft-IT/mcp-legal-it
 cd mcp-legal-it
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
@@ -173,7 +173,7 @@ Il server MCP funziona anche fuori da Claude — ma Codex CLI e ChatGPT non
 leggono i prompt guidati né le risorse `legal://`. Al posto delle skill del
 plugin Claude Code, usa il **bundle OpenAI** generato dallo stesso corpus:
 
-1. Scarica **`legal-it-openai-skills-X.Y.Z.zip`** dall'ultima [Release](https://github.com/capazme/mcp-legal-it/releases/latest) — contiene 42 skill (`.agents/skills/`), `AGENTS.md` e `config.toml.example`.
+1. Scarica **`legal-it-openai-skills-X.Y.Z.zip`** dall'ultima [Release](https://github.com/LexCraft-IT/mcp-legal-it/releases/latest) — contiene 42 skill (`.agents/skills/`), `AGENTS.md` e `config.toml.example`.
 2. **Codex CLI**: estrai `.agents/skills/` in `$HOME/.agents/skills/` (globale) o nella root del progetto; copia `AGENTS.md`; aggiungi il blocco `config.toml.example` a `~/.codex/config.toml` (server MCP separato, via `uv`).
 3. **ChatGPT**: carica `.agents/skills/` nella Skills UI; i 233 tool richiedono un connector Developer Mode su un endpoint HTTPS self-hosted (vedi Docker sopra).
 
@@ -183,14 +183,14 @@ Guida completa (naming del server, verifica `/mcp`, limiti rispetto al plugin Cl
 
 | Canale | Tag | Dove | Cosa ottieni |
 |---|---|---|---|
-| **Stabile** | `vX.Y.Z` | [`releases/latest`](https://github.com/capazme/mcp-legal-it/releases/latest), marketplace Claude Code | La linea in uso oggi (2.x) |
-| **Beta** | `vX.Y.Z-beta.N` | [Releases](https://github.com/capazme/mcp-legal-it/releases) marcate **Pre-release** | Anteprima della prossima major/minor (es. 3.0.0) prima del rilascio definitivo |
+| **Stabile** | `vX.Y.Z` | [`releases/latest`](https://github.com/LexCraft-IT/mcp-legal-it/releases/latest), marketplace Claude Code | La linea in uso oggi (2.x) |
+| **Beta** | `vX.Y.Z-beta.N` | [Releases](https://github.com/LexCraft-IT/mcp-legal-it/releases) marcate **Pre-release** | Anteprima della prossima major/minor (es. 3.0.0) prima del rilascio definitivo |
 
 `releases/latest` e il marketplace continuano a servire sempre la linea stabile: una beta non li tocca mai.
 
 Per provare una beta:
 
-1. Scarica gli artefatti dalla release Pre-release specifica (`.mcpb`, plugin zip, bundle OpenAI — stessa build della release stabile, versione beta stampata dentro) dalla pagina [Releases](https://github.com/capazme/mcp-legal-it/releases).
+1. Scarica gli artefatti dalla release Pre-release specifica (`.mcpb`, plugin zip, bundle OpenAI — stessa build della release stabile, versione beta stampata dentro) dalla pagina [Releases](https://github.com/LexCraft-IT/mcp-legal-it/releases).
 2. In alternativa, da sorgente: `git checkout vX.Y.Z-beta.N`.
 
 ---
@@ -661,7 +661,7 @@ pacchetto (semver): riferimento completo in [docs/api.md](docs/api.md).
 ## Sviluppo
 
 ```bash
-git clone https://github.com/capazme/mcp-legal-it
+git clone https://github.com/LexCraft-IT/mcp-legal-it
 cd mcp-legal-it
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
@@ -690,7 +690,7 @@ Fino alla linea 2.x il progetto era distribuito con licenza Apache-2.0: vedi [NO
 
 ### Codice da VisuaLex
 
-Con la 3.0 i lettori delle fonti di [VisuaLex](https://github.com/capazme/VisuaLexAPI)
+Con la 3.0 i lettori delle fonti di [VisuaLex](https://github.com/LexCraft-IT/lexcraft)
 (MPL-2.0, degli stessi autori) confluiscono in mcp-legal-it, che VisuaLex usa poi
 come dipendenza. Ogni file importato porta l'intestazione MPL-2.0 e la riga
 «Imported from VisuaLex (MPL-2.0), `<percorso>` at `<commit>`»; le parti

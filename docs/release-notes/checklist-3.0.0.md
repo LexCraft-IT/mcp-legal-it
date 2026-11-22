@@ -159,7 +159,7 @@ release candidate:
 | `LEGAL_BROCARDI=off claude`: 233 tools, `stato_server` says `spento_esplicito` | [ ] | [ ] | [ ] |
 | `"LEGAL_BROCARDI": "on"` in the `env` block of `~/.claude/settings.json`, app's Code tab (not started from a terminal): `stato_server` says `acceso`. The mechanism was verified on 2026-10-21 (Mac, Claude Code CLI, temporary HOME: a plugin MCP server received `off` with the block and an empty value without it); this row checks it end to end in the app | [ ] | [ ] | [ ] |
 | `.mcpb` in Claude Desktop: installs, tools answer, first start rebuilds once | [ ] | [ ] | [ ] |
-| `uvx --from git+https://github.com/capazme/mcp-legal-it@v3.0.0 mcp-legal-it --version` | [ ] | [ ] | [ ] |
+| `uvx --from git+https://github.com/LexCraft-IT/mcp-legal-it@v3.0.0 mcp-legal-it --version` | [ ] | [ ] | [ ] |
 | Docker (`docker build .`, `docker run -p 8000:8000`), 233 tools on `/mcp` (235 with `-e LEGAL_BROCARDI=on`) | [ ] | — | — |
 | A generated DOCX lands in the private temp folder (0700 on Mac) | [ ] | [ ] | [ ] |
 | Time to `initialize`, cold / warm (2.x reference: plugin 1.8 s / 0.6 s) | | | |

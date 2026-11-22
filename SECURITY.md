@@ -265,9 +265,9 @@ python scripts/update-data.py     # stato di freschezza di tutte le tabelle
 ## Segnalare una vulnerabilità
 
 Apri una issue su
-[github.com/capazme/mcp-legal-it/issues](https://github.com/capazme/mcp-legal-it/issues).
+[github.com/LexCraft-IT/mcp-legal-it/issues](https://github.com/LexCraft-IT/mcp-legal-it/issues).
 Per problemi che è meglio non discutere in pubblico, usa
-[GitHub Security Advisories](https://github.com/capazme/mcp-legal-it/security/advisories/new),
+[GitHub Security Advisories](https://github.com/LexCraft-IT/mcp-legal-it/security/advisories/new),
 che apre un canale privato con il manutentore.
 
 ## Controlli automatici già attivi

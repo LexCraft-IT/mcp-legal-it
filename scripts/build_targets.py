@@ -317,7 +317,7 @@ Bundle di skill Legal IT in formato AGENTS/Codex, generato dal corpus di
 
 ## Approfondimenti
 
-Guida completa: https://github.com/capazme/mcp-legal-it/blob/main/docs/openai.md
+Guida completa: https://github.com/LexCraft-IT/mcp-legal-it/blob/main/docs/openai.md
 """
 
 

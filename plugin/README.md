@@ -23,7 +23,7 @@ Dopo l'installazione di `uv`, chiudi del tutto Claude (o il terminale) e riapril
 **Dal marketplace del progetto** (serve anche `git`; su macOS `xcode-select --install`):
 
 ```bash
-claude plugin marketplace add capazme/mcp-legal-it
+claude plugin marketplace add LexCraft-IT/mcp-legal-it
 claude plugin install legal-it@mcp-legal-it
 ```
 
@@ -60,7 +60,7 @@ A queste fonti arrivano solo i parametri della ricerca (per esempio il numero di
 
 Le skill `esporta-documento` e `cookie-audit` usano Node.js con il pacchetto `docx`, se presente; la skill `cookie-audit` usa anche gli strumenti del browser di Claude, quando disponibili.
 
-Informativa privacy: <https://capazme.github.io/mcp-legal-it/privacy.html>. Assistenza: <https://github.com/capazme/mcp-legal-it/issues>.
+Informativa privacy: <https://lexcraft-it.github.io/mcp-legal-it/privacy.html>. Assistenza: <https://github.com/LexCraft-IT/mcp-legal-it/issues>.
 
 ## Il controllo delle citazioni
 

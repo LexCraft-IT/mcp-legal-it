@@ -9,13 +9,13 @@ blank_issues_enabled: true
 
 contact_links:
   - name: Segnalare una vulnerabilità (privato)
-    url: https://github.com/capazme/mcp-legal-it/security/advisories/new
+    url: https://github.com/LexCraft-IT/mcp-legal-it/security/advisories/new
     about: Segnalazione privata al maintainer, non visibile pubblicamente. Non aprire una issue per problemi di sicurezza — usa questo canale.
 
   - name: Domanda sull'uso dei tool
-    url: https://github.com/capazme/mcp-legal-it/discussions/new?category=q-a
+    url: https://github.com/LexCraft-IT/mcp-legal-it/discussions/new?category=q-a
     about: Come si usa un tool, come si legge un output, problemi di installazione o configurazione del plugin. Le domande vanno qui, non nelle issue.
 
   - name: Idee e proposte di nuovi tool
-    url: https://github.com/capazme/mcp-legal-it/discussions/new?category=ideas
+    url: https://github.com/LexCraft-IT/mcp-legal-it/discussions/new?category=ideas
     about: Proposte da discutere prima che diventino una feature request — nuove fonti, nuovi calcoli, nuovi modelli di atti.

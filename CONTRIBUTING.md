@@ -41,7 +41,7 @@ scripts/build_targets.py ...` (or any environment with `pip install -e
 ## 1. Setup ambiente
 
 ```bash
-git clone https://github.com/capazme/mcp-legal-it
+git clone https://github.com/LexCraft-IT/mcp-legal-it
 cd mcp-legal-it
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
