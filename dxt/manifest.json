@@ -11,9 +11,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/capazme/mcp-legal-it.git"
+    "url": "https://github.com/LexCraft-IT/mcp-legal-it.git"
   },
-  "homepage": "https://github.com/capazme/mcp-legal-it",
+  "homepage": "https://github.com/LexCraft-IT/mcp-legal-it",
   "license": "MPL-2.0",
   "server": {
     "type": "python",
