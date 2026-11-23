@@ -28,6 +28,21 @@ entry, it is the same feature as ported to the 3.0 line.
   safe.
 
 ### Added
+- **The citation gate warns on regional laws (decision LI-086).** No tool reads a regional law, so
+  every «l.r.» or «legge regionale» an answer cites is listed, with the advice to check it on the
+  Region's official bulletin or database; «fuori copertura» on the line lets it through, and
+  `LEGAL_CITATION_GATE=off` switches it off with the rest of the gate. The server now answers
+  «fonte non coperta» for a regional law and never reads it as a State law. The same for the laws
+  of the Province autonome di Trento e di Bolzano («l.p.», «legge provinciale»).
+- **The codice deontologico forense in `cite_law`**, read from the consolidated PDF the
+  Consiglio nazionale forense publishes (not on Normattiva): «art. 68 codice deontologico
+  forense», «art. 25-bis NCDF». The article comes with the CNF's notes on each amendment,
+  as `INDICATIVO` (the deliberations in the Gazzetta Ufficiale are authentic), and a text
+  published before it comes into force is said to be so. A PDF the server does not
+  recognise is refused, never read into another article. **Citation gate:** a `cite_law`
+  of the code now covers its citations, so they no longer need «fuori copertura»; «CDF» or
+  «c.d.f.» (they may be the Carta dei diritti fondamentali) and other professions' codes
+  still do.
 - **`LEGAL_IT_GATE_SKIP_PATHS`: folders whose sessions the citation gate
   skips.** A list of absolute folders (separated by `:` on macOS/Linux, `;` on
   Windows, or by commas): a session whose `cwd` (from the hook input, else the
@@ -389,6 +404,26 @@ entry, it is the same feature as ported to the 3.0 line.
   `/verbale` mostra prima il grafico, poi la tabella dei dettagli.
 
 ### Changed
+- **Brocardi.it is off by default (decision LI-079).** Brocardi.it is the server's only
+  private source (doctrinal notes and case-law abstracts, never the text of a norm), and it is
+  now off unless switched on; every other source stays on. With nothing set no request reaches
+  brocardi.it, `cerca_brocardi` and `fetch_law_annotations` are not listed (233 tools instead
+  of 235), and `cite_law(include_annotations=True)`, `giurisprudenza_articolo` and
+  `mappa_orientamento` say in one line, where the Brocardi part would have been, «Brocardi non
+  attivo in questa installazione». The server instructions, skills, agents and commands take
+  the Italgiure path by default (`giurisprudenza_su_norma`, `cerca_giurisprudenza` →
+  `leggi_sentenza`) and use Brocardi only if available. **To switch it on:**
+  `LEGAL_BROCARDI=on` (or `1`, `true`, `yes`) in the environment of the server or of Claude
+  Code (also the `env` block of `~/.claude/settings.json`), or in code
+  `crea_server(brocardi=True)`, `configurazione(brocardi=True)` or
+  `_brocardi_switch.set_default(True)`; `crea_server()` now follows the process
+  (`brocardi=None`). `LEGAL_BROCARDI=off` (or `0`, `false`, `no`) keeps it off and code cannot
+  switch it back on (`ValueError`); any other value counts as off, is reported on stderr at
+  start-up and named by `stato_server`, whose `brocardi.stato` says `spento_per_default`,
+  `acceso`, `spento_esplicito` or `valore_non_riconosciuto`. The stock server now hides the
+  `solo_brocardi` tools per request (a visibility transform), so a server built with
+  `crea_server(brocardi=True)` lists and calls them. `release.py` counts the default surface
+  (233) for the manifests.
 - **The citation gate reads like the server, and checks decisions too.** The
   plugin's Stop hook, now also registered on `SubagentStop`, extracts citations
   with the server's own parser and resolver (moved, unchanged, into the
@@ -490,6 +525,9 @@ entry, it is the same feature as ported to the 3.0 line.
   `mcp-legal-it/fonti_consultate` dal `_meta`).
 
 ### Fixed
+- **`cookie-audit`: the newsletter-form probe reads the form's real address (#175).** A field
+  named «action» inside the form (WordPress forms posting to `admin-ajax.php`) hid the form's
+  address and made the probe throw on the whole page; it now reads the `action` attribute.
 - The citation hook (Stop and SubagentStop) no longer opens the server's
   Python environment. `uv run --project <plugin>/server`, even with
   `--no-sync`, deletes and recreates that environment whenever it finds it

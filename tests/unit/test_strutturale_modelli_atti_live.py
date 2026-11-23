@@ -233,7 +233,9 @@ def test_piano_atto_di_precetto_artt_479_481_e_avvertimento_art_480_co_2():
     r = _genera("atto_di_precetto")
     assert r["riferimenti_normativi"] == ["artt. 479-481 c.p.c."]
     assert r["tool_diretto"] == "atto_di_precetto"
-    assert not contiene(" ".join(r["avvertenze"]), "90 giorni", "art. 481")
+    avvertenze = " ".join(r["avvertenze"])
+    assert not contiene(avvertenze, "novanta giorni dalla sua notificazione", "art. 481", "non minore di dieci giorni")
+    assert "644" not in avvertenze  # #195: the decreto ingiuntivo's rule, not the precetto's
 
     precetto = _tool("atti_giudiziari", "atto_di_precetto")(
         creditore="Alfa S.r.l.", debitore="Mario Rossi",
@@ -251,8 +253,8 @@ def test_piano_citazione_ordinaria_art_163_bis_120_150_giorni():
     r = _genera("citazione_ordinaria")
     assert r["riferimenti_normativi"] == ["art. 163 c.p.c.", "D.Lgs. 149/2022"]
     assert not contiene(" ".join(r["avvertenze"]), "120 giorni", "150 giorni")
-    assert r["resource_modello"] == "legal://modelli-atti/introduttivi"
-    assert "non ancora disponibile" in r["istruzioni"]
+    assert r["resource_modello"] == "legal://riferimenti/modelli-atti-catalogo"
+    assert "Nessun modello testuale" in r["istruzioni"]
 
 
 # ---------------------------------------------------------------------------
@@ -339,15 +341,16 @@ def test_routing_e_tool_calcolo_puntano_a_tool_registrati():
 
 
 def test_resource_e_preventivo_procedura_dichiarati_non_disponibili():
-    """47 entries have no generator yet (30 resource entries, 17 preventivo_procedura): the tool
-    must say so instead of pointing to a resource or tool that does not exist."""
+    """Entries with no generator (34 resource entries, 14 preventivo_procedura): the tool must say
+    so and point only to a resource or tool that exists. Since #195 the resource entries name the
+    registered catalog and say that no per-type text model exists."""
     tools, resources = _superficie_mcp()
     assert "preventivo_procedura" not in tools
     for k, e in _catalogo().items():
         tipo = e["routing"]["tipo"]
         if tipo == "resource":
-            assert e["routing"]["resource"] not in resources
-            assert "non ancora disponibile" in _genera(k)["istruzioni"], k
+            assert e["routing"]["resource"] in resources, k
+            assert "Nessun modello testuale" in _genera(k)["istruzioni"], k
         elif tipo == "preventivo_procedura":
             r = _genera(k)
             assert r["tool_diretto"] == "preventivo_civile" and "approssimazione" in r["istruzioni"], k
@@ -429,7 +432,53 @@ def test_riferimenti_normativi_in_vigore():
 _AVVERTENZE_CORRETTE = [
     ("citazione_ordinaria", ["120 giorni", "150 giorni"], "art. 163-bis c.p.c.",
      ["centoventi giorni", "centocinquanta giorni"]),
-    ("opposizione_decreto_ingiuntivo", ["40 giorni"], "art. 641 c.p.c.", ["quaranta giorni"]),
+    # G-493: the term is the decree's (art. 641 co. 1-2), a late opposition only under art. 650.
+    ("opposizione_decreto_ingiuntivo", ["fissato nel decreto", "fino a 10", "a 60 per giusti motivi", "fino a 20",
+                                        "tra 30 e 120"], "art. 641 c.p.c.",
+     ["ridotto sino a dieci giorni oppure aumentato a sessanta", "puo' essere ridotto fino a venti giorni",
+      "non puo' essere inferiore a trenta ne' superiore a centoventi"]),
+    ("opposizione_decreto_ingiuntivo", ["irregolarità della notifica", "10 giorni dal primo atto di esecuzione",
+                                        "art. 650"], "art. 650 c.p.c.",
+     ["per irregolarita' della notificazione o per caso fortuito o forza maggiore",
+      "decorsi dieci giorni dal primo atto di esecuzione"]),
+    # C. Cost. 120/1976, in the note under art. 650: also who knew of the decree in time.
+    ("opposizione_decreto_ingiuntivo", ["pur avendone avuto conoscenza", "C. Cost. 120/1976"], "art. 650 c.p.c.",
+     ["pur avendo avuto conoscenza del decreto ingiuntivo, non abbia potuto, per caso fortuito o forza maggiore, "
+      "fare opposizione entro il termine fissato nel decreto"]),
+    ("relata_pec_opposizione_di", ["pur avendone avuto conoscenza", "C. Cost. 120/1976"], "art. 650 c.p.c.",
+     ["pur avendo avuto conoscenza del decreto ingiuntivo, non abbia potuto, per caso fortuito o forza maggiore"]),
+    ("opposizione_decreto_ingiuntivo", ["davanti al giudice di pace", "art. 316 co. 1"], "art. 316 c.p.c.",
+     ["davanti al giudice di pace la domanda si propone nelle forme del procedimento semplificato di cognizione"]),
+    ("opposizione_decreto_ingiuntivo", ["procedimento semplificato", "art. 281-decies"], "art. 281-decies c.p.c.",
+     ["alle opposizioni previste dagli articoli 615, primo comma, 617, primo comma, e 645"]),
+    ("opposizione_decreto_ingiuntivo", ["30 giorni dalla scadenza del termine minimo a comparire"], "art. 645 c.p.c.",
+     ["non oltre trenta giorni dalla scadenza del termine minimo a comparire"]),
+    # LI-086: the comma art. 645 co. 3 refers to is shown as repealed on Normattiva, and the model says so.
+    ("opposizione_decreto_ingiuntivo", ["163-bis, secondo comma, c.p.c. risulta abrogato", "n. 149", "n. 197"],
+     "art. 163-bis c.p.c.", ["comma abrogato dal d.lgs. 10 ottobre 2022, n. 149 come modificato dalla l. 29 "
+                             "dicembre 2022, n. 197"]),
+    ("relata_pec_opposizione_di", ["fissato nel decreto ingiuntivo", "fino a 10", "tra 30 e 120", "art. 650"],
+     "art. 641 c.p.c.", ["ridotto sino a dieci giorni oppure aumentato a sessanta"]),
+    # G-493: the notice goes to the third party, is deposited, and its lack makes the pignoramento inefficace.
+    ("avviso_543_5_cpc", ["terzo pignorato, non il debitore", "numero di ruolo",
+                          "notificato al terzo e, notificato, depositato nel fascicolo dell'esecuzione entro la data",
+                          "inefficace", "rispetto ai quali l'avviso non è notificato o depositato"], "art. 543 c.p.c.",
+     ["al terzo l'avviso di avvenuta iscrizione a ruolo con indicazione del numero di ruolo",
+      "deposita l'avviso notificato nel fascicolo dell'esecuzione", "determina l'inefficacia del pignoramento",
+      "solo nei confronti dei terzi rispetto ai quali non e' notificato o depositato l'avviso"]),
+    # G-493: the sale needs the art. 567 documentation within the art. 497 term; the judge sets the value.
+    ("vendita_immobili", ["10 giorni dal pignoramento", "art. 501"], "art. 501 c.p.c.",
+     ["non puo' essere proposta se non decorsi dieci giorni dal pignoramento"]),
+    ("vendita_immobili", ["45 giorni", "art. 497"], "art. 497 c.p.c.",
+     ["quarantacinque giorni senza che sia stata richiesta l'assegnazione o la vendita"]),
+    ("vendita_immobili", ["venti anni anteriori alla trascrizione del pignoramento", "certificato notarile",
+                          "inefficacia del pignoramento", "cancellazione della trascrizione del pignoramento",
+                          "estinzione del processo esecutivo"], "art. 567 c.p.c.",
+     ["nei venti anni anteriori alla trascrizione del pignoramento", "certificato notarile",
+      "dichiara l'inefficacia del pignoramento", "dispone la cancellazione della trascrizione del pignoramento",
+      "l'estinzione del processo esecutivo se non vi sono altri beni pignorati"]),
+    ("vendita_immobili", ["valore di mercato", "art. 569"], "art. 568 c.p.c.",
+     ["avuto riguardo al valore di mercato sulla base degli elementi forniti dalle parti e dall'esperto"]),
     ("relata_pec_appello", ["30 gg"], "art. 325 c.p.c.", ["trenta giorni"]),
     ("relata_pec_appello", ["6 mesi"], "art. 327 c.p.c.", ["sei mesi"]),
     ("atto_appello", ["10 gg dalla notifica"], "art. 165 c.p.c.", ["entro dieci giorni dalla notificazione"]),
@@ -439,8 +488,11 @@ _AVVERTENZE_CORRETTE = [
      ["ridotto alla meta' per i processi speciali previsti nel libro iv, titolo i"]),
     ("decreto_ingiuntivo_retribuzioni", ["tre volte", "art. 9 co. 1-bis"], "art. 9 DPR 115/2002",
      ["tre volte l'importo previsto dall'articolo 76"]),
-    ("atto_di_precetto", ["90 giorni", "art. 481"], "art. 481 c.p.c.", ["novanta giorni"]),
-    ("atto_di_precetto", ["60 giorni", "90 se all'estero", "art. 644"], "art. 644 c.p.c.",
+    ("atto_di_precetto", ["novanta giorni dalla sua notificazione", "art. 481", "art. 627"], "art. 481 c.p.c.",
+     ["novanta giorni dalla sua notificazione", "riprende a decorrere a norma dell'articolo 627"]),
+    ("atto_di_precetto", ["non minore di dieci giorni", "art. 482", "giudice competente per l'esecuzione"],
+     "art. 480 c.p.c.", ["termine non minore di dieci giorni", "indicazione del giudice competente per l'esecuzione"]),
+    ("decreto_ingiuntivo_ordinario", ["60 giorni", "90 se all'estero", "art. 644"], "art. 644 c.p.c.",
      ["sessanta giorni", "novanta giorni"]),
     ("termine_efficacia_titolo", ["90 giorni"], "art. 481 c.p.c.", ["novanta giorni"]),
     ("invito_negoziazione", ["30 giorni"], "art. 4 DL 132/2014", ["trenta giorni dalla ricezione"]),

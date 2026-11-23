@@ -1,0 +1,175 @@
+"""Sigle and nicknames of testi unici and laws: the second alias pass (G-440).
+
+Each identity was checked on Normattiva on 11 November 2026 (the page's heading for type, date
+and number; the act's title for its subject; the act calling itself «testo unico» where the
+alias says so). Names more than one act answers at the same date are refused on purpose
+(``NOMI_AMBIGUI``), «TUA» among them. «TUIVA» and «T.U. registro» are not ambiguous any more:
+they follow the date, the old act until the new testo unico applies (LI-086,
+test_sigle_datate_li086).
+"""
+
+import pytest
+
+import mcp_legal_it.server  # noqa: F401  (registers every tool module first: avoids a circular import)
+from mcp_legal_it.core.citazioni import identita_atto, norme_nel_testo
+from mcp_legal_it.core.riferimenti import _parse_reference, _resolve_act, _unresolved_act_error
+from mcp_legal_it.lib.visualex.models import Norma
+
+DPR = "decreto del presidente della repubblica"
+DLGS = "decreto legislativo"
+
+
+@pytest.mark.parametrize("nome, tipo, data, numero", [
+    ("TUED", DPR, "2001-06-06", "380"), ("T.U.E.D.", DPR, "2001-06-06", "380"), ("TUEd", DPR, "2001-06-06", "380"),
+    ("TUEs", DPR, "2001-06-08", "327"), ("T.U.Es.", DPR, "2001-06-08", "327"), ("TUEspr", DPR, "2001-06-08", "327"),
+    ("TUSG", DPR, "2002-05-30", "115"), ("T.U.S.G.", DPR, "2002-05-30", "115"),
+    ("T.U. spese di giustizia", DPR, "2002-05-30", "115"), ("TU spese di giustizia", DPR, "2002-05-30", "115"),
+    ("testo unico delle spese di giustizia", DPR, "2002-05-30", "115"),
+    ("TUDA", DPR, "2000-12-28", "445"), ("T.U.D.A.", DPR, "2000-12-28", "445"),
+    ("T.U. documentazione amministrativa", DPR, "2000-12-28", "445"),
+    ("T.U. accise", DLGS, "1995-10-26", "504"),
+    ("TULD", DPR, "1973-01-23", "43"), ("T.U.L.D.", DPR, "1973-01-23", "43"),
+    ("TUSMA", DLGS, "2021-11-08", "208"), ("TUSMAR", DLGS, "2005-07-31", "177"),
+    ("TUOM", DPR, "2010-03-15", "90"), ("T.U.O.M.", DPR, "2010-03-15", "90"),
+    ("TUIMM", DLGS, "1998-07-25", "286"), ("TUStup", DPR, "1990-10-09", "309"),
+    ("T.U. ambiente", DLGS, "2006-04-03", "152"), ("TU ambiente", DLGS, "2006-04-03", "152"),
+    ("TUAmb", DLGS, "2006-04-03", "152"),
+    ("St. lav.", "legge", "1970-05-20", "300"), ("L.F.", "regio decreto", "1942-03-16", "267"),
+    ("l. proc. amm.", "legge", "1990-08-07", "241"),
+    ("legge Madia", "legge", "2015-08-07", "124"),
+    ("legge Balduzzi", "decreto legge", "2012-09-13", "158"),
+    ("decreto whistleblowing", DLGS, "2023-03-10", "24"),
+    ("decreto dignità", "decreto legge", "2018-07-12", "87"),
+    ("decreto Salva Casa", "decreto legge", "2024-05-29", "69"),
+    ("decreto salva-casa", "decreto legge", "2024-05-29", "69"),
+])
+def test_the_aliases(nome, tipo, data, numero):
+    assert _resolve_act(nome) == {"tipo_atto": tipo, "data": data, "numero_atto": numero}
+
+
+@pytest.mark.parametrize("nome, tipo, numero", [
+    ("cod. ass.", "codice delle assicurazioni private", "209"),
+    ("codice Urbani", "codice dei beni culturali e del paesaggio", "42"),
+    ("CBCP", "codice dei beni culturali e del paesaggio", "42"),
+])
+def test_the_codes(nome, tipo, numero):
+    info = _resolve_act(nome)
+    assert info["tipo_atto"] == tipo and info["numero_atto"] == numero
+
+
+@pytest.mark.parametrize("nome", ["cod. priv.", "c.priv.", "c. priv."])
+def test_the_codice_privacy(nome):
+    # The code's own type, so the same URN as «codice privacy» (d.lgs. 196/2003), never a type
+    # «codice privacy» Normattiva has no heading for.
+    info = _resolve_act(nome)
+    assert info["tipo_atto"] == "codice in materia di protezione dei dati personali"
+    assert identita_atto(info) == identita_atto(_resolve_act("codice privacy"))
+    assert Norma(tipo_atto=info["tipo_atto"]).url().endswith("decreto.legislativo:2003-06-30;196")
+
+
+def test_l_proc_amm_is_the_241():
+    assert _resolve_act("l. proc. amm.") == _resolve_act("legge sul procedimento amministrativo")
+
+
+class TestArt36BisTued:
+    def test_cite_law_reads_the_reference(self):
+        articolo, atto = _parse_reference("art. 36-bis TUED")
+        info = _resolve_act(atto)
+        url = Norma(tipo_atto=info["tipo_atto"], data=info["data"], numero_atto=info["numero_atto"]).url(
+            article=articolo)
+        assert url.endswith("decreto.del.presidente.della.repubblica:2001-06-06;380~art36bis")
+
+    def test_the_gate_reads_it(self):
+        trovate = norme_nel_testo("La sanatoria segue l'art. 36-bis TUED, introdotto nel 2024.")
+        assert [(n.atto, n.articolo) for n in trovate] == [
+            (identita_atto({"tipo_atto": DPR, "data": "2001-06-06", "numero_atto": "380"}), "36bis")]
+
+
+def test_tue_stays_the_treaty():
+    assert _resolve_act("TUE")["tipo_atto"] == "TUE"
+    assert _resolve_act("T.U.E.")["tipo_atto"] == "TUE"
+
+
+@pytest.mark.parametrize("nome", [
+    "TUS", "T.U.S.", "decreto trasparenza", "decreto Semplificazioni", "riforma Cartabia",
+    "TUA", "T.U.A.", "T.U. rinnovabili", "testo unico rinnovabili",
+    "TUFER", "decreto FER", "decreto CER", "S.L.", "SL", "TUI", "L.P.A.", "LPA", "cod. app.",
+    "testo unico dei servizi di media audiovisivi", "testo unico servizi media audiovisivi",
+])
+def test_ambiguous_names_are_refused_on_purpose(nome):
+    assert _resolve_act(nome) is None
+    out = _unresolved_act_error(nome)
+    assert out.startswith("**Errore**: nome ambiguo") and f"«{nome}»" in out, out
+    assert "Forse intendevi" not in out
+
+
+def test_the_example_is_a_placeholder_not_an_act():
+    assert "«d.lgs. n/aaaa»" in _unresolved_act_error("TUS")
+
+
+def test_cod_app_names_the_three_codes_and_no_article_goes_to_one_of_them():
+    out = _unresolved_act_error("cod. app.")
+    assert all(s in out for s in ("n. 163", "n. 50", "n. 36"))
+    codice_2023 = identita_atto({"tipo_atto": "codice dei contratti pubblici", "data": "2023-03-31", "numero_atto": "36"})
+    assert all(n.atto != codice_2023 for n in norme_nel_testo("Art. 80 cod. app. (d.lgs. 50/2016)."))
+
+
+def test_an_act_a_nickname_is_ambiguous_for_still_resolves_by_its_number():
+    # «decreto trasparenza» is refused, the d.lgs. 33/2013 it may mean is not.
+    assert _resolve_act("d.lgs. 33/2013") == {"tipo_atto": DLGS, "data": "2013", "numero_atto": "33"}
+    assert _resolve_act("decreto legislativo 14 marzo 2013, n. 33")["numero_atto"] == "33"
+
+
+def test_tusma_and_tusmar_stay_distinct():
+    assert _resolve_act("TUSMA")["numero_atto"] == "208"
+    assert _resolve_act("TUSMAR")["numero_atto"] == "177"
+    assert _resolve_act("testo unico dei servizi di media audiovisivi e radiofonici")["numero_atto"] == "177"
+
+
+def test_tua_names_both_acts():
+    # «TUA» is the codice dell'ambiente and the testo unico accise at the same date (LI-086):
+    # the refusal names both, so the reader can ask again with the full name.
+    out = _unresolved_act_error("TUA")
+    assert "d.lgs. 3 aprile 2006, n. 152" in out and "d.lgs. 26 ottobre 1995, n. 504" in out, out
+
+
+def test_an_unknown_sigla_stays_unresolved():
+    # «TUOG» names no testo unico that could be checked: unresolved, not guessed.
+    assert _resolve_act("TUOG") is None
+
+
+@pytest.mark.parametrize("rif", ["art. 190 c.g.c.", "art. 190 c.g.c"])
+def test_the_codice_di_giustizia_contabile_is_never_ambiguous(rif):
+    from mcp_legal_it.lib.visualex.map import nome_ambiguo
+
+    articolo, atto = _parse_reference(rif)
+    info = _resolve_act(atto)
+    assert articolo == "190" and info["numero_atto"] == "174" and info["data"] == "2016-08-26"
+    assert nome_ambiguo(atto) is None
+
+
+def _forme(chiave: str) -> set:
+    """The key as written, upper case, and dotted/undotted for a short sigla."""
+    nuda = chiave.replace(".", "").replace(" ", "")
+    forme = {chiave, chiave.upper()}
+    if nuda.isalpha() and len(nuda) <= 6:
+        forme |= {nuda, nuda.upper(), ".".join(nuda) + ".", ".".join(nuda)}
+    return forme
+
+
+def test_no_ambiguous_key_resolves_in_the_tables():
+    # Checks the tables, not nome_ambiguo: a key that also resolves is a contradiction.
+    from mcp_legal_it.lib.visualex.map import NOMI_AMBIGUI, resolve_atto
+
+    for chiave in NOMI_AMBIGUI:
+        for forma in _forme(chiave):
+            assert resolve_atto(forma) is None, (chiave, forma, resolve_atto(forma))
+
+
+def test_no_name_the_tables_know_collides_with_an_ambiguous_key():
+    # Every name the resolver knows, through the same keys it is looked up by.
+    from mcp_legal_it.lib.visualex.map import NOMI_AMBIGUI, _candidate_keys, known_act_names, resolve_atto
+
+    for nome in known_act_names():
+        if resolve_atto(nome):
+            assert not set(_candidate_keys(nome)) & set(NOMI_AMBIGUI), nome

@@ -13,11 +13,14 @@ turn, and ``tests/unit/test_citation_gate.py`` checks that it pulls in no
 HTTP stack.
 """
 
+import bisect
 import re
 from dataclasses import dataclass
 
 from mcp_legal_it.core.riferimenti import _parse_reference, _resolve_act
 from mcp_legal_it.lib.visualex.article_suffixes import ARTICLE_SUFFIX_ALTERNATION
+from mcp_legal_it.lib.visualex.map import (LEGGE_PROVINCIALE_NEL_TESTO, LEGGE_REGIONALE_NEL_TESTO, SIGLE_COME_MESI,
+                                             fonte_locale, legge_provinciale, legge_regionale)
 from mcp_legal_it.lib.visualex.models import ANNEX_ID, Norma
 
 # Cassazione decision shape: a decision number followed by a 4-digit year,
@@ -215,7 +218,26 @@ _FINE_FRASE = re.compile(r"(?:(?<=[a-zà-ù]{4})|(?<=\d))[.!?]\s+(?=[A-ZÀ-Ý])"
 # theirs is a citation the session must verify elsewhere or mark out of coverage.
 _FONTE_NON_RISOLTA = re.compile(
     r"^[\s,;]*(?:(?:del|dello|della|dei|degli|delle|dell['’])\s*)?"
-    r"(?:cedu\b|cdf\b|codice\s+deontologico|convenzione\s+europea|"
+    # «CDF», «c.d.f.»: the resolver does not take them (they may be the Carta dei diritti
+    # fondamentali), so a citation of either is a source no tool covers.
+    # The «norme integrative» of the Corte costituzionale: a deliberation of the Court that
+    # Normattiva does not publish (map.FONTI_NON_COPERTE, G-440). Only the Court's: the
+    # «norme integrative» of a CCNL or of a regolamento condominiale are not law.
+    # The other sources of map.FONTI_NON_COPERTE (G-440): the protocols of the CEDU, Consob's
+    # regulations, the Carta sociale europea and the treaties keyed there, each by its own name
+    # (a «protocollo d'intesa», a «regolamento condominiale» or a company's charter are not law).
+    r"(?:cedu\b|c\.e\.d\.u\.|c\.?d\.?f\b\.?|codice\s+deontologico|convenzione\s+europea|"
+    r"(?:primo\s+)?prot(?:ocollo|\.)\s*(?:n\.?\s*\d+\s+|\d+\s+|addiz(?:ionale|\.)\s+)(?:alla\s+)?(?:cedu\b|convenzione\s+europea)|"
+    # «Mercati» is Consob's regulation unless the words after it make it a municipal one
+    # («regolamento mercati rionali del Comune», «… comunali», «… all'ingrosso»).
+    r"reg(?:olamento|\.)\s*(?:consob\s+)?(?:emittenti|opc)\b|"
+    r"reg(?:olamento|\.)\s*(?:consob\s+)?mercati\b(?!\s+(?:rional|comunal|settimanal|ortofrutticol|"
+    r"agroalimentar|ittic|di\s+quartiere|all['’]ingrosso|del\s+comune))|"
+    r"carta\s+sociale\s+europea|convenzione\s+di\s+aarhus|cedaw\b|(?:convenzione\s+)?marpol\b|"
+    r"patto\s+internazionale\s+(?:sui|relativo\s+ai)\s+diritti\s+civili|"
+    r"convenzione\s+(?:onu\s+)?sui\s+diritti\s+del\s+fanciullo|"
+    r"(?:norme\s+integrative\s+(?:per\s+i\s+giudizi\s+(?:davanti|dinanzi|innanzi)\s+alla\s+|della\s+)?"
+    r"|n\.\s?i\.\s*(?:della\s+)?)corte\s+cost|"
     r"(?:d\.?\s?lgs|d\.?\s?l|d\.?p\.?r|d\.?p\.?c\.?m|d\.?\s?m|l|legge|decreto(?:[-\s]legge)?|"
     r"reg(?:olamento)?|dir(?:ettiva)?)\.?\s*(?:\(\s*(?:ue|ce|cee)\s*\)\s*)?(?:n\.?\s*)?\d)",
     re.IGNORECASE,
@@ -256,12 +278,15 @@ def identita_atto(act_info: dict) -> str:
 
     Every alias of one act lands on one URL ("codice privacy" and "D.Lgs. 196/2003"
     both give the decree's URN). A cited year stands in for the full date, so the
-    date is reduced to its year.
+    date is reduced to its year. An annex the resolver names is part of the act's
+    identity (``;104:3`` for «disp. att. c.p.a.», ``;175:1`` for the testo unico della
+    giustizia tributaria): its art. 1 is not the decree's or the code's art. 1 (G-440).
     """
     norma = Norma(
         tipo_atto=act_info.get("tipo_atto", "") or "",
         data=act_info.get("data", "") or "",
         numero_atto=act_info.get("numero_atto", "") or "",
+        allegato=act_info.get("allegato", "") or "",
     )
     return re.sub(r":(\d{4})-\d{2}-\d{2}(?=[;:~]|$)", r":\1", norma.url())
 
@@ -298,10 +323,25 @@ def _atto_dopo(coda: str) -> "dict | None":
             break
         parole.append(parola)
     for k in range(len(parole), 0, -1):
+        if k < len(parole) and _mese(parole[k - 1]) and _ANNO.match(parole[k]):
+            # «art. 17 mar. 2020»: a month followed by its year, never the MAR («art. 17 MAR
+            # 2014», all capitals and no dot, stays the regulation).
+            continue
         info = _risolvi(" ".join(parole[:k]))
         if info:
             return info
     return None
+
+
+#: A year right after a word («mar. 2020,»): that word is the month of a date.
+_ANNO = re.compile(r"^(?:1[89]|20)\d{2}\b")
+
+
+def _mese(parola: str) -> bool:
+    """Whether a sigla of ``SIGLE_COME_MESI`` is written as a month: with its dot («mar.»), or
+    not all in capitals («mar», «Mar»). «MAR» and «MAR,» are the sigla."""
+    nuda = parola.strip(",;:")
+    return nuda.lower().rstrip(".") in SIGLE_COME_MESI and (nuda.endswith(".") or not nuda.isupper())
 
 
 def _atto_prima(prima: str) -> "dict | None":
@@ -323,6 +363,10 @@ def _atto_prima(prima: str) -> "dict | None":
             k < len(parole) and parole[-k - 1].lower() in ("di", "d'", "d’")
         ):
             return None
+        if len(candidato) == 1 and _mese(candidato[0]):
+            # «mar» before an article is a date's month («il 17 mar art. 2 …»), never the MAR:
+            # the MAR is read only after the article («art. 17 MAR»).
+            continue
         info = _risolvi(" ".join(candidato))
         if info:
             return info
@@ -338,6 +382,16 @@ def _estratto(testo: str, start: int, end: int) -> str:
     return re.sub(r"\s+", " ", testo[start:end]).strip()[:80]
 
 
+def _dopo_gli_articoli(testo: str, m: "re.Match") -> "tuple[re.Match, int, str] | None":
+    """``(articles, end of their indicators, rest of the line)`` after an article heading *m*."""
+    lista = _LISTA_ARTICOLI.match(testo, m.end())
+    if not lista:
+        return None
+    dopo = _INDICATORI.match(testo, lista.end()).end()
+    fine_riga = testo.find("\n", dopo)
+    return lista, dopo, testo[dopo: (fine_riga if fine_riga != -1 else len(testo))][:200]
+
+
 def norme_nel_testo(testo: str) -> list[NormaCitata]:
     """Every article of an act cited in *testo*, resolved with the server's resolver.
 
@@ -348,12 +402,15 @@ def norme_nel_testo(testo: str) -> list[NormaCitata]:
     """
     trovate: list[NormaCitata] = []
     for m in _INTESTAZIONE.finditer(testo):
-        lista = _LISTA_ARTICOLI.match(testo, m.end())
-        if not lista:
+        letta = _dopo_gli_articoli(testo, m)
+        if letta is None:
             continue
-        dopo = _INDICATORI.match(testo, lista.end()).end()
-        fine_riga = testo.find("\n", dopo)
-        coda = testo[dopo: (fine_riga if fine_riga != -1 else len(testo))][:200]
+        lista, dopo, coda = letta
+        if fonte_locale(coda):
+            # An article of a regional or provincial law (LI-086): never read as a State act's,
+            # even where its first words would resolve («legge 10 novembre 2014, n. 65 della
+            # Regione Toscana»). leggi_regionali_nel_testo / leggi_provinciali_nel_testo read the law.
+            continue
         info = _atto_dopo(coda)
         if info is None and not _GENITIVO.match(coda) and not _FONTE_NON_RISOLTA.match(coda):
             inizio_riga = testo.rfind("\n", 0, m.start()) + 1
@@ -366,6 +423,45 @@ def norme_nel_testo(testo: str) -> list[NormaCitata]:
         comma = _comma_citato(testo, m.start(), lista.end(), dopo) if len(articoli) == 1 else None
         for articolo in articoli:
             trovate.append(NormaCitata(atto, normalizza_articolo(articolo), estratto, comma))
+    return trovate
+
+
+def leggi_regionali_nel_testo(testo: str) -> list[str]:
+    """Every regional law cited in *testo* («l.r. Toscana 65/2014», «legge regionale 12 marzo 2015,
+    n. 3»), as written, once each. No tool reads a regional law (LI-086): the gate warns on each."""
+    return _leggi_locali_nel_testo(testo, LEGGE_REGIONALE_NEL_TESTO, legge_regionale)
+
+
+def leggi_provinciali_nel_testo(testo: str) -> list[str]:
+    """Every law of the Province autonome di Trento e di Bolzano cited in *testo* («l.p. 13/1997»,
+    «legge 13/1997 della Provincia autonoma di Trento»), as written, once each, as the regional laws."""
+    return _leggi_locali_nel_testo(testo, LEGGE_PROVINCIALE_NEL_TESTO, legge_provinciale)
+
+
+def _leggi_locali_nel_testo(testo: str, pattern: "re.Pattern[str]", riconosce) -> list[str]:
+    """The laws *pattern* reads in *testo*, plus the act after any article *riconosce* as one."""
+    visti, trovate, inizi = set(), [], []
+
+    def aggiungi(estratto: str) -> None:
+        estratto = re.sub(r"\s+", " ", estratto).strip(" ,;:.")
+        if estratto and estratto.lower() not in visti:
+            visti.add(estratto.lower())
+            trovate.append(estratto)
+
+    for m in pattern.finditer(testo):
+        inizi.append(m.start())
+        aggiungi(m.group(0))
+    # An article whose act is such a law (norme_nel_testo leaves it out) is never left silent:
+    # when the pattern above did not read its law, the start of what follows it is.
+    for m in _INTESTAZIONE.finditer(testo):
+        letta = _dopo_gli_articoli(testo, m)
+        if letta is None or not riconosce(letta[2]):
+            continue
+        dopo = letta[1]
+        i = bisect.bisect_left(inizi, dopo)  # inizi is sorted: finditer reads left to right
+        if i < len(inizi) and inizi[i] <= dopo + 40:
+            continue
+        aggiungi(re.split(r"[;.](?:\s|$)|,\s+(?:e|nonché|che)\b", letta[2].strip(), maxsplit=1)[0][:80])
     return trovate
 
 
@@ -604,7 +700,7 @@ _TITOLO_ARTICOLO = re.compile(
 def articolo_servito(testo: str) -> "str | None":
     """The article a ``cite_law``/``fetch_law_article`` text is about, from its first line of body.
 
-    Header lines ("**Fonte**: ...", "**Testo tratto dall'Allegato ...**") are skipped.
+    Header lines ("**Fonte**: ...", "**Testo tratto da: Allegato ...**") are skipped.
     None when the text does not open on an article heading (an annex, a recital).
     """
     corpo = next((r for r in testo.splitlines() if r.strip() and not r.lstrip().startswith("**")), "")

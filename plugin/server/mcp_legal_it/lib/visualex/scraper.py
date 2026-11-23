@@ -24,7 +24,7 @@ from .._http import note_source
 from . import act_dates, normattiva_html, note_normattiva, note_redazionali, pagine_eurlex, pagine_normattiva, parti_normattiva
 from .akn_parser import annex_id_of, comparable_article_key, normalize_article_key, position_hint
 from .models import Norma, NormaVisitata, names_an_annex, split_annex, url_in_part
-from .map import codice_urn, find_brocardi_url
+from .map import codice_urn, find_brocardi_url, tipo_locale
 
 
 def _akn_disabled() -> bool:
@@ -192,14 +192,27 @@ _INTESTAZIONI_ELI = {
     # cited under its other name.
     "decreto.legislativo.luogotenenziale": frozenset({
         "DECRETO LEGISLATIVO LUOGOTENENZIALE", "DECRETO-LEGGE LUOGOTENENZIALE"}),
+    # The other acts of 1944-1948, measured on 11 Nov 2026 by sampling year-only URNs of
+    # 1923-1950 (G-440); each kind is the one Normattiva's own export gives the act
+    # (FRBRalias urn:nir). D.Lgt. 30 marzo 1946, n. 512 and 10 agosto 1944, n. 208:
+    "decreto.luogotenenziale": frozenset({"DECRETO LUOGOTENENZIALE"}),
+    # D.C.P.S. 6 settembre 1946, n. 659:
+    "decreto.del.capo.provvisorio.dello.stato": frozenset({"DECRETO DEL CAPO PROVVISORIO DELLO STATO"}),
+    # D.Lgs.C.P.S. 14 dicembre 1947, n. 1577 (legge Basevi) and 10 gennaio 1947, n. 3:
+    "decreto.legislativo.del.capo.provvisorio.dello.stato": frozenset({
+        "DECRETO LEGISLATIVO DEL CAPO PROVVISORIO DELLO STATO"}),
 }
 #: Every heading type the library knows: a page headed by one of these that is not the asked
-#: type's is another act's (L. 17 ottobre 2014, n. 158 served for a DPCM n. 158 of 2014).
+#: type's is another act's (L. 17 ottobre 2014, n. 158 served for a DPCM n. 158 of 2014; the
+#: D.Lgt. 30 marzo 1946, n. 512 served for a «r.d.lgs. 512/1946», G-440). A heading type in no
+#: table says nothing: measure it on a real page before adding it.
 _TIPI_INTESTAZIONE_NOTI = frozenset(act_dates._TITLES.values()).union(*_INTESTAZIONI_ELI.values())
-#: The heading each type's page opens with: the titles VisuaLex verifies (``act_dates._TITLES``)
-#: and the measured ones above. A titled type is dated by its title; its heading only says
-#: when the page is another act's (L. 241/1990 served for a d.lgs. n. 241 of 1990, #146).
-_INTESTAZIONI = {**{kind: frozenset({tipo}) for kind, tipo in act_dates._TITLES.items()}, **_INTESTAZIONI_ELI}
+#: The heading each type's page opens with: the titles VisuaLex verifies (``act_dates._TITLES``,
+#: with ``_TITLES_ANCHE``: a D.Lgs.C.P.S. is the act a «d.lgs.» cites, the legge Basevi) and the
+#: measured ones above. A titled type is dated by its title; its heading only says when the page
+#: is another act's (L. 241/1990 served for a d.lgs. n. 241 of 1990, #146).
+_INTESTAZIONI = {**{kind: frozenset({tipo, *act_dates._TITLES_ANCHE.get(kind, ())})
+                    for kind, tipo in act_dates._TITLES.items()}, **_INTESTAZIONI_ELI}
 
 
 class AttoNonVerificato(LookupError):
@@ -589,16 +602,23 @@ async def _fetch_article(nv: NormaVisitata, *, canale: str = "html") -> dict:
     """
     if canale not in ("html", "akn"):
         raise ValueError(f"canale sconosciuto: {canale!r}")
+    if nv.norma._is_cnf():
+        return await _fetch_cnf(nv)
     is_eurlex = nv.norma._is_eurlex()
     source = "eurlex" if is_eurlex else "normattiva"
     annex = split_annex(nv.numero_articolo)
+    if not is_eurlex and (locale := tipo_locale(nv.norma.tipo_atto)):
+        # A regional or provincial act: no request (LI-086). Normattiva would answer with the State's act.
+        return {"text": "", "url": "", "source": source, "error": f"fonte non coperta — {locale}"}
 
     if is_eurlex:
         # The text in force of an amended act is its latest consolidation (issue #50).
         nv, ue = await _versione_ue(nv)
         if ue.get("error"):
             return {"text": "", "url": nv.norma.url(), "source": source, **ue}
-        html, url = await _fetch_eurlex_html(nv.norma)
+        nv, ue, html, url = await _html_ue(nv, ue)
+        if ue.get("error"):
+            return {"text": "", "url": url, "source": source, **ue}
         if not html:
             return {"text": "", "url": url, "source": source, **ue, "error": "Could not fetch EUR-Lex document"}
         text = _extract_eurlex_article(html, nv.numero_articolo)
@@ -652,7 +672,7 @@ async def _fetch_article(nv: NormaVisitata, *, canale: str = "html") -> dict:
 
         part = _akn_part_hint(nv.norma)
         if canale == "html":
-            return await _html_article(nv, url, part)
+            return await _rinvio_differito(nv, await _html_article(nv, url, part))
 
         # AKN channel: the official Akoma Ntoso XML export first, then the page.
         act = None
@@ -661,6 +681,11 @@ async def _fetch_article(nv: NormaVisitata, *, canale: str = "html") -> dict:
 
             act = await fetch_act_akn(nv.norma, _vigenza_akn(nv))
             if act is not None:
+                decreto = _articolo_del_decreto(act, nv, url, part)
+                if decreto:
+                    # The URN names the decree's own article, which it has (G-440).
+                    return {"text": decreto, "url": url, "source": "normattiva-akn", "data_atto": nv.norma.data,
+                            **_note_export(act, nv.numero_articolo, _DISPOSITIVO)}
                 akn_text = _akn_article(act, nv.numero_articolo, part)
                 if akn_text:
                     result = {"text": akn_text, "url": url, "source": "normattiva-akn", "data_atto": nv.norma.data,
@@ -1315,6 +1340,26 @@ def _esito_inserito(nv: NormaVisitata, url: str, result: dict) -> "dict | None":
             "not_in_force": True}
 
 
+async def _fetch_cnf(nv: NormaVisitata) -> dict:
+    """An article of the codice deontologico forense, from the PDF the CNF publishes (``lib/cnf``).
+
+    Only the text in force exists there: a text at a date, the original text or an annex is
+    refused before any request, never answered with today's text.
+    """
+    from mcp_legal_it.lib.cnf import fetch_articolo
+
+    url = nv.norma.url()
+    if nv.data_versione or (nv.versione or "").strip().lower() == "originale":
+        return {"text": "", "url": url, "source": "cnf",
+                "error": ("il CNF pubblica solo il testo vigente del codice deontologico forense: "
+                          "versioni a una data e testo originale non sono disponibili")}
+    if split_annex(nv.numero_articolo) or names_an_annex(nv.numero_articolo):
+        return {"text": "", "url": url, "source": "cnf", "error": "il codice deontologico forense non ha allegati"}
+    if not nv.numero_articolo:
+        return {"text": "", "url": url, "source": "cnf", "error": "indicare l'articolo del codice deontologico forense"}
+    return await fetch_articolo(nv.numero_articolo)
+
+
 async def fetch_article_futura(nv: NormaVisitata, entro: "str | None" = None) -> dict:
     """:func:`_fetch_article_futura`, refused when a page read is another act's."""
     try:
@@ -1338,6 +1383,9 @@ async def _fetch_article_futura(nv: NormaVisitata, entro: "str | None" = None) -
     source = "normattiva"
     if nv.norma._is_eurlex():
         return {"text": "", "url": nv.norma.url(), "source": "eurlex",
+                "error": "versione 'futura' disponibile per gli atti su Normattiva"}
+    if nv.norma._is_cnf():
+        return {"text": "", "url": nv.norma.url(), "source": "cnf",
                 "error": "versione 'futura' disponibile per gli atti su Normattiva"}
     if split_annex(nv.numero_articolo):
         # Refused before any request, as the api refuses it (the annex's page is not read so).
@@ -1451,6 +1499,116 @@ def _extract_normattiva_article(html: str) -> str:
     return _normattiva_article_page(html)[0]
 
 
+async def rinvio_dalla_disposizione(s: "dict | None", oggi: str) -> "dict | None":
+    """A deferral the notes may have stopped telling, read in the provision that sets the date (#177).
+
+    *s* is ``vigenza_differita.rinvio_scaduto``: a chain whose date was moved later and has
+    passed (art. 765 c.p.c.: notes up to 31/10/2026). The provision the chain names (art. 32,
+    comma 3 of d.lgs. 116/2017) is read live, as in force today (the page is kept a day,
+    ``pagine_normattiva``), by ``vigenza_differita.stato_disposizione``. Its dates all passed,
+    or the comma spent: None, the amendments are in force. One date still to come: the
+    deferral, its chain widened with the acts that gave the provision its current wording (its
+    latest table of updates: d.l. 100/2026). The provision not readable, or its date not
+    known: the deferral with ``data`` None, so the notice is still given. Never a date written
+    in the code.
+    """
+    from . import aggiornamenti, vigenza_differita
+
+    if s is None:
+        return None
+    articolo, comma = vigenza_differita.articolo_e_comma(s["disposizione"])
+    stato, data, atti = "ignoto", None, set()
+    if articolo:
+        tipo, giorno, numero = s["atto"]
+        url = Norma(tipo_atto=tipo, data=giorno, numero_atto=numero).url(articolo)
+        try:
+            testo, servito = await _normattiva_page(f"{url}!vig={oggi}", articolo)
+        except (httpx.HTTPError, AttoNonVerificato):
+            testo, servito = "", None
+        voluto = _article_identity(normalize_article_key(articolo))
+        if testo and servito is not None and _article_identity(servito) == voluto:
+            stato, data = vigenza_differita.stato_disposizione(testo, comma, oggi, s.get("articolo"))
+        if stato == "in_vigore":
+            return None  # its dates have passed, or the comma is spent: the amendments are in force
+        dal = ((pagine_normattiva.leggi(f"{url}!vig={oggi}") or {}).get("validita") or {}).get("valid_from")
+        if stato == "rinvio" and dal:
+            try:
+                letta = await aggiornamenti.leggi_aggiornamenti(url, articolo, dal=dal, al=None, max_versioni=1,
+                                                                oggi=oggi)
+            except (httpx.HTTPError, AttoNonVerificato):
+                letta = {}
+            if letta.get("esito") == "trovato" and letta.get("corrente") is not None:
+                atti = vigenza_differita.atti_del_comma((letta.get("righe") or {}).get(letta["corrente"]), comma)
+    return vigenza_differita.riaperto(s, data, atti)
+
+
+async def _rinvio_differito(nv: NormaVisitata, result: dict) -> dict:
+    """*result*, read against an entry into force its notes defer past today (#172, #177).
+
+    The text in force today only (no date, no original, no coming version asked for), and a
+    page Normattiva served. When the page's notes put a provision's entry into force after
+    today (``vigenza_differita.rinvio``), or the notes stopped at a date already past that the
+    provision has moved again (:func:`rinvio_dalla_disposizione`), the article's table of
+    updates says whether the text already carries those amendments (``vigenza_differita.caso``):
+    ``rinvio`` says so, and in case A the text becomes that of the version before the deferred
+    ones, read from its own page. A deferred repeal (art. 73-bis disp. att. c.c.) is a case A
+    too: the article in force, never «abrogato». The table not readable, or the provision's
+    date not readable: ``rinvio`` with ``caso`` None, so the notice is still given.
+    """
+    from . import aggiornamenti, vigenza_differita
+
+    if (not result.get("text") or result.get("source") != "normattiva" or result.get("error")
+            or nv.suffisso_versione() or not nv.numero_articolo):
+        return result
+    pagina = pagine_normattiva.leggi(result.get("url") or "")
+    note = ((pagina or {}).get("note") or {}).get("note")
+    note = note if isinstance(note, list) else None
+    oggi = _clock.today().isoformat()
+    r = vigenza_differita.rinvio(note, oggi)
+    if r is None:
+        r = await rinvio_dalla_disposizione(vigenza_differita.rinvio_scaduto(note, oggi), oggi)
+        if r is None:
+            return result
+    url = re.sub(r"!vig=[^~!@?&]*$", "", result["url"])
+    try:
+        letta = await aggiornamenti.leggi_aggiornamenti(url, nv.numero_articolo, dal=r["atto"][1], al=None,
+                                                        max_versioni=20, oggi=oggi)
+    except (httpx.HTTPError, AttoNonVerificato):
+        letta = {"esito": "errore_fonte"}
+    if letta.get("esito") != "trovato" or letta.get("mancanti") or letta.get("oltre_tetto"):
+        # Not read, or read only in part (a walk that stopped, a ceiling): a missing table of the
+        # latest version would hide the deferral, a missing previous one would fake a case B.
+        return {**result, "rinvio": {**r, "caso": None}}
+    versioni, righe = letta.get("versioni") or {}, letta.get("righe") or {}
+    if r.get("data") is None:
+        # The provision's date not known: said whenever a version carries the deferred act.
+        if not vigenza_differita.porta_atto_rinviato(r, righe):
+            return result
+        return {**result, "rinvio": {**r, "caso": None}}
+    caso, info = vigenza_differita.caso(r, versioni, righe)
+    if caso is None:
+        return result
+    abrogante = abrogato_da(result["text"]) if r.get("abrogazione") else None
+    cambio = "inserted" if caso == "non_in_vigore" else "abrogated" if r.get("abrogazione") else "amended"
+    upcoming = {"change": cambio, "valid_from": r["data"], "version_number": None}
+    if caso == "A":
+        vig = f"{url}!vig={info['precedente'][2]}"
+        try:
+            testo, servito = await _normattiva_page(vig, nv.numero_articolo)
+        except (httpx.HTTPError, AttoNonVerificato):
+            testo, servito = "", None  # case B below: never the whole article refused for it
+        requested = _article_identity(normalize_article_key(nv.numero_articolo))
+        if testo and servito is not None and _article_identity(servito) == requested:
+            result = {**result, "text": testo, "url": vig}
+        else:
+            # The previous version could not be read as this article: never assumed.
+            caso, info = "B", {**info, "precedente_non_letta": True}
+    if caso == "non_in_vigore":
+        result = {**result, "not_in_force": True}
+    extra = {"abrogato_da": abrogante} if abrogante else {}
+    return {**result, "upcoming": upcoming, "rinvio": {**r, **info, **extra, "caso": caso}}
+
+
 async def _html_article(nv: NormaVisitata, url: str, part: "str | None") -> dict:
     """The HTML channel: the page first, the Akoma Ntoso export only when the page fails.
 
@@ -1483,13 +1641,16 @@ async def _html_article(nv: NormaVisitata, url: str, part: "str | None") -> dict
         act = await _akn_act(nv)
         if requested is not None and act is not None:
             if (got is None and requested in _identita_articoli(act, part)
-                    and (part or not annex_id_of(act.main_part) or _URL_NOMINA_PARTE.search(url))):
+                    and not _nomina_il_decreto(act, url, part)):
                 # The page does not say which article it is ("Codice Penale-art. 524"
                 # with the repeal notice outside the label) and the act has it: the
                 # page is the article, as VisuaLex serves it. Not when the act's main
                 # text is a code in an annex and the URN names the decree's body
-                # (art. 2 of d.lgs. 104/2010 asked as the decree's): the unlabelled page
-                # is then the decree's, and the code's article comes from the export.
+                # (art. 3 of d.lgs. 104/2010 asked as the decree's, which has artt. 1-2
+                # only): the unlabelled page is then the decree's, and the code's article
+                # comes from the export; the decree's own artt. 1-2 stay the decree's.
+                # The annex may have no identifier («Allegato», d.lgs. 175/2024): the
+                # URN, not the annex's name, says the page is the decree's.
                 return result
             if got is None and requested in _identita_articoli(act, part) and not part:
                 servito = _da_export(act, nv, url, part, result, etichetta=True)
@@ -1523,6 +1684,10 @@ async def _html_article(nv: NormaVisitata, url: str, part: "str | None") -> dict
                       "Normattiva non contiene il testo dell'articolo e l'export Akoma Ntoso non lo fornisce")}
 
 
+#: The part of an export holding the articles of a decree whose main text is an annex
+#: (``akn_parser``: the enacting provisions Normattiva serves as the act's *Dispositivo*).
+_DISPOSITIVO = "Dispositivo"
+
 #: The ":k" after the act number of a Normattiva URL: the URN names one of the act's parts.
 _URL_NOMINA_PARTE = re.compile(r";[^;:~!@?]+:\d+(?=~|!|@|$)")
 
@@ -1539,22 +1704,53 @@ def _numeri_articoli(act, part: "str | None") -> "set[str] | None":
     return {ident[0] for ident in map(_article_identity, act.article_keys(part)) if ident}
 
 
+def _nomina_il_decreto(act, url: str, part: "str | None") -> bool:
+    """Whether the URN names the body of a decree whose main text is an annex.
+
+    The decree is cited by its own number (``;175~art1``, no ``:k``) and its text is a code
+    or a testo unico it approves in an annex (d.lgs. 104/2010, d.lgs. 175/2024). An act
+    named by its code's URN (``;262:2``) or by an annex (*part*) is not.
+    """
+    return bool(act.main_part) and not part and not _URL_NOMINA_PARTE.search(url)
+
+
+def _articolo_del_decreto(act, nv: NormaVisitata, url: str, part: "str | None") -> "str | None":
+    """The decree's own article asked for, from the export, when the URN names it.
+
+    A decree that approves a testo unico in its annex has articles of its own (d.lgs.
+    175/2024: art. 1, «È approvato l'allegato testo unico …»). Its URN names them: the
+    annex's article of the same number, served under that URN, was another article
+    (G-440). None when the decree has no such article (the annex's then answers, labelled).
+    """
+    if not _nomina_il_decreto(act, url, part) or _DISPOSITIVO not in act.parts:
+        return None
+    return _akn_article(act, nv.numero_articolo, _DISPOSITIVO)
+
+
 def _da_export(act, nv: NormaVisitata, url: str, part: "str | None", base: dict, *,
                etichetta: bool = False) -> "dict | None":
     """The article from the Akoma Ntoso export, labelled as such, or None when the export lacks it.
 
+    The decree's own article when the URN names the body of a decree whose main text is
+    an annex and the decree has that article (``_articolo_del_decreto``). Otherwise
     ``allegato`` names the part it comes from when the act's main text is a code approved
     in an annex, or when *etichetta* says the URN's page does not reach that part; the URL
-    is then the part's own (``;104:2~art120``).
+    is then the part's own (``;104:2~art120``). So does an annex without an identifier of
+    its own (d.lgs. 175/2024's «Allegato») reached through the decree's URN.
     """
+    data_atto = base.get("data_atto", "")
+    decreto = _articolo_del_decreto(act, nv, url, part)
+    if decreto:
+        return {"text": decreto, "url": url, "source": "normattiva-akn", "data_atto": data_atto,
+                **_note_export(act, nv.numero_articolo, _DISPOSITIVO)}
     akn_text = _akn_article(act, nv.numero_articolo, part)
     if not akn_text:
         return None
-    servito = {"text": akn_text, "url": url, "source": "normattiva-akn", "data_atto": base.get("data_atto", ""),
+    servito = {"text": akn_text, "url": url, "source": "normattiva-akn", "data_atto": data_atto,
                **_note_export(act, nv.numero_articolo, part)}
-    if not part and (etichetta or annex_id_of(act.main_part)):
+    if not part and (etichetta or annex_id_of(act.main_part) or _nomina_il_decreto(act, url, part)):
         servito["allegato"] = act.main_part
-        if etichetta:
+        if etichetta or _nomina_il_decreto(act, url, part):
             servito["url"] = url_in_part(url, act.part_position())
     return servito
 
@@ -1675,8 +1871,66 @@ async def _pagina_ue(norma: Norma, *, oj: bool = False) -> "tuple[str, str, dict
     nv, ue = await _versione_ue(nv)
     if ue.get("error"):
         return "", nv.norma.url(), ue
-    html, url = await _fetch_eurlex_html(nv.norma)
+    nv, ue, html, url = await _html_ue(nv, ue)
     return html, url or nv.norma.url(), {**ue, "norma": nv.norma}
+
+
+async def _html_ue(nv: NormaVisitata, ue: dict) -> "tuple[NormaVisitata, dict, str, str]":
+    """``(nv read, extra keys, page, URL)`` of the EU text :func:`_versione_ue` chose (#163).
+
+    CELLAR lists consolidations it does not serve: reg. (UE) 2022/858 and 2025/1106 have one
+    that folds a corrigendum in, and its sector-0 CELEX answers 404 in every language
+    (11 November 2026). A consolidation chosen here that CELLAR does not serve is replaced by
+    the Official Journal text, said with its notice. A consolidation named by the caller is
+    not replaced: they asked that version. Any other failure is a readable error
+    (``esito`` :data:`CHECK_UNAVAILABLE` or, for a named version CELLAR does not have,
+    :data:`ARTICLE_NOT_FOUND`), never the HTTP client's raw message.
+    """
+    from . import eurlex_consolidate as ec
+
+    try:
+        html, url = await _fetch_eurlex_html(nv.norma)
+        return nv, ue, html, url
+    except httpx.HTTPError as exc:
+        status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+        celex = nv.norma.celex_consolidated or _build_celex(nv.norma) or ""
+        scelto = ue.get("consolidato") and ue.get("consolidato_verificato") is True
+        if status == 404 and scelto and not ec.solo_rettifiche(ue["consolidato"].get("modificato_da") or []):
+            # The text in force folds a real amendment in: the OJ text is not it. Refused,
+            # never the OJ text served as the text in force.
+            cons = ue["consolidato"]
+            return nv, {**ue, "esito": CHECK_UNAVAILABLE,
+                        "error": (f"il testo vigente di {nv.norma} è la versione consolidata al {cons['data']} "
+                                  f"(CELEX {cons['celex']}), che CELLAR non pubblica ora: il testo in GUUE "
+                                  "non incorpora le modifiche successive e non viene riportato come vigente. "
+                                  "Riprova più tardi, oppure chiedi il testo pubblicato in GUUE "
+                                  "(versione=\"originale\")")}, "", nv.norma.url()
+        if status == 404 and scelto:
+            # Corrigenda only: the OJ text, said, and INDICATIVO (``consolidato_non_pubblicato``).
+            oj = dataclasses.replace(nv, norma=dataclasses.replace(nv.norma, celex_consolidated=""))
+            ripiego = {**ue, "consolidato": None, "consolidato_non_pubblicato": ue["consolidato"],
+                       "avvisi_ue": [ec.avviso_consolidato_non_pubblicato(ue["consolidato"])]
+                       + list(ue.get("avvisi_ue") or [])}
+            try:
+                html, url = await _fetch_eurlex_html(oj.norma)
+                return oj, ripiego, html, url
+            except httpx.HTTPError as exc_oj:
+                return oj, {**ripiego, **_errore_cellar(oj.norma, _build_celex(oj.norma) or "", exc_oj)}, "", oj.norma.url()
+        if status == 404 and nv.norma.celex_consolidated:
+            return nv, {**ue, "esito": ARTICLE_NOT_FOUND,
+                        "error": (f"la versione consolidata CELEX {celex} di {nv.norma} non è pubblicata su "
+                                  "CELLAR: controlla il CELEX, oppure chiedi il testo vigente senza indicarla")}, "", nv.norma.url()
+        return nv, {**ue, **_errore_cellar(nv.norma, celex, exc)}, "", nv.norma.url()
+
+
+def _errore_cellar(norma: Norma, celex: str, exc: "httpx.HTTPError") -> dict:
+    """A readable refusal for a CELLAR document that could not be read (#163)."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        come = f"CELLAR risponde HTTP {exc.response.status_code}"
+    else:
+        come = f"CELLAR non risponde ({type(exc).__name__})"
+    return {"esito": CHECK_UNAVAILABLE,
+            "error": f"testo di {norma} (CELEX {celex}) non disponibile: {come}. Riprova più tardi"}
 
 
 async def fetch_eurlex_tree(norma: Norma, *, link: bool = False, details: bool = False) -> dict:

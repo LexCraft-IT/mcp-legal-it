@@ -200,6 +200,12 @@ def _lookup_base(reference: str) -> dict:
         # An EU act's text: the consolidation read ({celex, data, modificato_da}, None for the
         # Official Journal text), and whether CELLAR was asked (False: it could not say).
         "consolidato": None, "consolidato_verificato": None,
+        # The consolidation of corrigenda CELLAR lists but does not publish, whose OJ text was
+        # served instead (#163); None otherwise.
+        "consolidato_non_pubblicato": None,
+        # An entry into force the article's notes defer past today (#172): {data, nota, atto,
+        # articolo, caso}, None otherwise.
+        "rinvio": None,
     }
 
 
@@ -220,6 +226,7 @@ async def _lookup_visitata(base: dict, nv: NormaVisitata, act_info: dict, *,
                            canale: str = "html", comma: str | None = None,
                            progressivo: int | None = None, per: str = "mcp") -> tuple[dict, str | None]:
     """Fetch *nv* and fill *base* (see ``_cite_law_lookup``)."""
+    avviso_sigla = act_info.get("avviso")
     article = nv.numero_articolo
     base["articolo"] = article or ""
     base["atto"] = {
@@ -253,6 +260,7 @@ async def _lookup_visitata(base: dict, nv: NormaVisitata, act_info: dict, *,
     base["testo"] = result.get("text", "") or ""
     base["consolidato"] = result.get("consolidato")
     base["consolidato_verificato"] = result.get("consolidato_verificato")
+    base["consolidato_non_pubblicato"] = result.get("consolidato_non_pubblicato")
     if result.get("error"):
         base["errore"] = result["error"]
     elif not base["testo"]:
@@ -262,12 +270,24 @@ async def _lookup_visitata(base: dict, nv: NormaVisitata, act_info: dict, *,
         # the text in force: INDICATIVO, and said first.
         base["not_in_force"] = True
         act_info = futura_datata(act_info, result["upcoming"])
+    if result.get("rinvio") and base["testo"]:
+        from mcp_legal_it.lib.visualex import vigenza_differita
+
+        # Before the quality: a deferred repeal shapes its successione (#177).
+        base["rinvio"] = vigenza_differita.sintesi(result["rinvio"])
     q = qualita_testo(base, act_info, article)
     if base.get("not_in_force"):
         q = {**q, "precisione": "INDICATIVO", "avvisi": [avviso_non_in_vigore(result["upcoming"])] + q["avvisi"]}
+    if base.get("rinvio"):
+        # Amendments whose entry into force a later act deferred (#172): never ESATTO, said.
+        from mcp_legal_it.lib.visualex import vigenza_differita
+
+        q = {**q, "precisione": "INDICATIVO", "avvisi": [vigenza_differita.avviso(result["rinvio"])] + q["avvisi"]}
     # An EU text's own notices (a consolidation not applicable yet, a day before the act
     # was in force) come from the lookup, after the notice of what the text is.
     base["avvisi"] = q["avvisi"] + (list(result.get("avvisi_ue") or []) if base["testo"] else [])
+    if base["testo"]:
+        base["avvisi"] += list(result.get("avvisi_cnf") or [])
     if result.get("avviso_assenza"):
         # An article missing from the consolidation read: the outcome is «not found», and the
         # reader is told why and where the OJ text is.
@@ -283,8 +303,14 @@ async def _lookup_visitata(base: dict, nv: NormaVisitata, act_info: dict, *,
     if result.get("errore_parte"):
         base["errore"], base["esito_parte"] = result["errore_parte"], result.get("esito_parte")
     note_aggiornamento(base)
+    if base["fonte"] == "cnf" and base["testo"]:
+        # The CNF's own notes to the article: which deliberation changed it, and when.
+        base["note_aggiornamento"] = list(result.get("note_aggiornamento") or [])
     note_redazionali(base, result)
     base.pop("chiave_pagina", None)
+    if avviso_sigla:
+        # A sigla that follows the date (LI-086): which act it names today, said first.
+        base["avvisi"] = [avviso_sigla] + list(base["avvisi"])
     return base, result.get("esito")
 
 
@@ -457,7 +483,10 @@ def _qualita_ue(base: dict, act_info: "dict | None", article: str) -> dict:
     consolidato, verificato = base.get("consolidato"), base.get("consolidato_verificato")
     allegato_oj = bool(split_annex(article)) and not consolidato
     avvisi = ec.avvisi(consolidato, verificato, (act_info or {}).get("data_versione") or None, allegato_oj)
-    precisione = "INDICATIVO" if (consolidato or verificato is False or allegato_oj) else "ESATTO"
+    # The OJ text served for a consolidation of corrigenda CELLAR does not publish (#163): the
+    # corrigenda are not in it, so it is not the corrected text.
+    non_pubblicato = bool(base.get("consolidato_non_pubblicato"))
+    precisione = "INDICATIVO" if (consolidato or verificato is False or allegato_oj or non_pubblicato) else "ESATTO"
     return {**vuoto, "precisione": precisione, "avvisi": avvisi}
 
 
@@ -484,6 +513,10 @@ def qualita_testo(base: dict, act_info: "dict | None" = None, article: str = "")
     testo, fonte, url = base.get("testo") or "", base.get("fonte") or "", base.get("url") or ""
     if testo and fonte == "eurlex":
         return _qualita_ue(base, act_info, article)
+    if testo and fonte == "cnf":
+        # The CNF's consolidated text of its code: what is authentic is each deliberation as the
+        # Gazzetta published it, as an EU consolidation stands to the Official Journal.
+        return {"validita": None, "precisione": "INDICATIVO", "avvisi": [], "successione": None, "upcoming": None}
     if not testo or fonte not in ("normattiva", "normattiva-akn"):
         return {"validita": None, "precisione": None, "avvisi": [], "successione": None, "upcoming": None}
     data_rich = (act_info or {}).get("data_versione") or None
@@ -522,13 +555,21 @@ def qualita_testo(base: dict, act_info: "dict | None" = None, article: str = "")
                           f"{aggiornato}: i due testi possono non coincidere")
         pagina_abrogata = None if validita_letta is None else validita_letta["state"] == "abrogated"
         export_abrogato = is_abrogato(testo)
-    if pagina_abrogata is not None and export_abrogato is not None and pagina_abrogata != export_abrogato:
+    rinvio = base.get("rinvio") or {}
+    if (pagina_abrogata is not None and export_abrogato is not None and pagina_abrogata != export_abrogato
+            and not rinvio.get("abrogazione")):
+        # A deferred repeal (#177) is the reason the two disagree, and its notice says so.
         avvisi.append("i due canali di Normattiva non concordano sull'abrogazione: "
                       + ("la pagina dà l'articolo come abrogato, l'export Akoma Ntoso no"
                          if pagina_abrogata else "l'export Akoma Ntoso dà l'articolo come abrogato, la pagina no"))
     successione = None
     if (atto := _abrogato_da(testo)) is not None:
         successione = {"abrogato_da": atto, "precisione": "INDICATIVO", "fonte": "avviso di abrogazione nel testo"}
+    elif rinvio.get("caso") == "A" and rinvio.get("abrogato_da") and rinvio.get("data"):
+        # A repeal deferred past today (#177): the article is in force, and will be repealed.
+        successione = {"abrogato_da": rinvio["abrogato_da"], "dal": rinvio["data"], "precisione": "INDICATIVO",
+                       "fonte": ("abrogazione rinviata (disposizione che la rinvia)" if rinvio.get("data_nota")
+                                 else "abrogazione rinviata (note di Normattiva)")}
     futura = versione_futura(url) if not data_rich else None
     upcoming = ({"change": futura["change"], "valid_from": futura["valid_from"],
                  "version_number": futura["version_number"]} if futura else None)

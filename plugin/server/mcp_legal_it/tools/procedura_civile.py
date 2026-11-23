@@ -21,6 +21,19 @@ def _normalizza_materia(materia: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", senza_accenti).strip("_")
 
 
+# Articles and prepositions do not tell one matter from another: «contratti d'opera»,
+# «contratto di opera» and «contratti opera» name the same matter of art. 5 co. 1 D.Lgs. 28/2010.
+_PAROLE_VUOTE_MATERIA = frozenset({
+    "a", "al", "con", "d", "da", "de", "dei", "degli", "del", "della", "delle", "dello",
+    "di", "e", "ed", "gli", "i", "il", "in", "l", "la", "le", "lo", "per",
+})
+
+
+def _chiave_materia(materia: str) -> str:
+    """The normalised matter without articles and prepositions: the form the table is matched on."""
+    return "_".join(t for t in _normalizza_materia(materia).split("_") if t not in _PAROLE_VUOTE_MATERIA)
+
+
 @mcp.tool(tags={"calcolo", "giudiziario"})
 def competenza_giudice(
     valore_causa: float,
@@ -171,9 +184,12 @@ def verifica_mediazione_obbligatoria(materia: str) -> dict:
     Controlla l'elenco delle materie per cui il tentativo di mediazione è condizione
     di procedibilità della domanda giudiziale, sia quelle originarie del 2010 sia
     quelle aggiunte dalla riforma Cartabia (D.Lgs. 149/2022).
-    Vigenza: Art. 5 co. 1, 5 e 6 D.Lgs. 28/2010 come modificato da D.Lgs. 149/2022 e D.Lgs. 28/2023 (testo letto su Normattiva al 2026-09-29).
-    Il confronto e' per identita' (nome o alias, senza accenti): un input vuoto o sotto i 3 caratteri e' 'non determinabile',
-    un input generico come 'contratti' e' 'non determinabile' (obbligatoria=None).
+    Vigenza: Art. 5 co. 1, 5 e 6 D.Lgs. 28/2010 come modificato da D.Lgs. 149/2022 e D.Lgs. 28/2023 (testo letto su Normattiva al 2026-09-29; elenco del co. 1 riletto il 2026-11-22).
+    Il confronto e' per identita' (nome o alias, senza accenti, apostrofi, articoli e preposizioni: 'contratti d'opera',
+    'contratto di opera' e 'contratti_opera' coincidono; ogni voce dell'art. 5 co. 1 scritta come nella norma e' riconosciuta,
+    anche 'contratti assicurativi, bancari e finanziari', che ne comprende tre): un input vuoto o sotto i 3 caratteri, un input generico come
+    'contratti' e una materia non riconosciuta sono 'non determinabile' (obbligatoria=None, mai False: verificare
+    l'elenco dell'art. 5 co. 1). obbligatoria=False solo per una materia nota fuori elenco (circolazione stradale).
     Precisione: ESATTO per le materie elencate; per materie di confine verificare con cite_law.
     Chaining: → competenza_giudice() per determinare il giudice davanti al quale instaurare il giudizio
 
@@ -185,7 +201,7 @@ def verifica_mediazione_obbligatoria(materia: str) -> dict:
     materie = data["materie"]
     esclusioni = data["esclusioni"]
 
-    materia_norm = _normalizza_materia(materia)
+    materia_norm = _chiave_materia(materia)
     def _risposta(**extra):
         base = {
             "materia_input": materia,
@@ -200,7 +216,7 @@ def verifica_mediazione_obbligatoria(materia: str) -> dict:
     # 'contratti' o una stringa vuota non devono agganciare la prima voce che li contiene.
     trovata = None
     for m in materie:
-        if materia_norm == m["nome"] or materia_norm in m.get("alias", []):
+        if materia_norm in {_chiave_materia(k) for k in (m["nome"], *m.get("alias", []))}:
             trovata = m
             break
 
@@ -211,6 +227,19 @@ def verifica_mediazione_obbligatoria(materia: str) -> dict:
             fonte=trovata["fonte"],
             note=trovata["note"],
         )
+
+    # An item of art. 5 co. 1 written as the norm writes it may name several matters of the table
+    # at once («contratti assicurativi, bancari e finanziari»): all of them are listed.
+    for voce in data.get("voci_composte", []):
+        if materia_norm == _chiave_materia(voce["voce"]):
+            comprese = [m for m in materie if m["nome"] in voce["materie"]]
+            return _risposta(
+                obbligatoria=True,
+                materia_trovata=", ".join(m["nome"] for m in comprese),
+                fonte=", ".join(dict.fromkeys(m["fonte"] for m in comprese)),
+                note="Voce dell'art. 5 co. 1 che comprende più materie: "
+                     + "; ".join(f"{m['nome']}: {m['note']}" for m in comprese),
+            )
 
     if len(materia_norm) < 3:
         return _risposta(
@@ -236,11 +265,21 @@ def verifica_mediazione_obbligatoria(materia: str) -> dict:
             note="Materia non inclusa nell'elenco ex art. 5 co. 1 D.Lgs. 28/2010. Il risarcimento del danno da circolazione di veicoli e natanti (e le domande di pagamento fino a 50.000 euro) richiede la negoziazione assistita obbligatoria (art. 3 D.L. 132/2014).",
         )
 
+    # Unknown is not «not listed»: a false here would let the claim be declared improcedibile (art. 5 co. 2).
     return _risposta(
-        obbligatoria=False,
+        obbligatoria=None,
         materia_trovata=None,
         fonte=None,
-        note="Materia non inclusa nell'elenco ex art. 5 co. 1 D.Lgs. 28/2010. La mediazione può essere tentata su base volontaria ma non è condizione di procedibilità.",
+        note=(
+            "Non determinabile: la materia indicata non corrisponde a nessuna voce dell'elenco dell'art. 5 co. 1 "
+            "D.Lgs. 28/2010 riconosciuta dal tool. Verificare l'elenco sul testo vigente (cite_law): se la controversia "
+            "vi rientra, la mediazione è condizione di procedibilità della domanda (art. 5 co. 2). L'elenco: "
+            "condominio, diritti reali, divisione, successioni ereditarie, patti di famiglia, locazione, comodato, "
+            "affitto di aziende, risarcimento del danno derivante da responsabilità medica e sanitaria e da "
+            "diffamazione con il mezzo della stampa o con altro mezzo di pubblicità, contratti assicurativi, bancari "
+            "e finanziari, associazione in partecipazione, consorzio, franchising, opera, rete, somministrazione, "
+            "società di persone e subfornitura."
+        ),
     )
 
 

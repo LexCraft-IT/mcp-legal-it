@@ -50,6 +50,9 @@ reads (`id_local`, `type_document`, `date_document`, `title`) and the `<title>`,
 | `landing_dllgt_151_1944.html` | `decreto.legislativo.luogotenenziale:1944;151` | the act headed «DECRETO-LEGGE LUOGOTENENZIALE 25 giugno 1944, n. 151» (`type_document` DECRETO-LEGGE_LUOGOTENENZIALE) |
 | `landing_dpcm_2020_03_08_senza_numero.html` | by ELI, `/eli/id/2020/03/08/20A01522/CONSOLIDATED` (a URN without a number answers the error page) | the D.P.C.M. 8 marzo 2020, an act without a number (title «DECRETO DEL PRESIDENTE DEL CONSIGLIO DEI MINISTRI 8 marzo 2020») |
 | `landing_rd_1825_1924_serve_rdl.html` | `regio.decreto:1924;1825` | the act headed «REGIO DECRETO-LEGGE 13 novembre 1924, n. 1825» (a wrong sub-type in the citation) |
+| `landing_dlgt_512_1946_serve_rdlgs.html` | `regio.decreto.legislativo:1946;512` | captured 2026-11-11: the page of D.Lgt. 30 marzo 1946, n. 512 (title «DECRETO LUOGOTENENZIALE 30 marzo 1946, n. 512»), another act |
+| `landing_dlgscps_1577_1947.html` | `decreto.legislativo.del.capo.provvisorio.dello.stato:1947;1577` | captured 2026-11-11: the page of D.Lgs.C.P.S. 14 dicembre 1947, n. 1577 (legge Basevi) |
+| `landing_dcps_659_1946.html` | `decreto.del.capo.provvisorio.dello.stato:1946;659` | captured 2026-11-11: the page of D.C.P.S. 6 settembre 1946, n. 659 |
 
 Used by `tests/unit/test_api_risolvi_atto.py` and `tests/unit/test_atto_per_anno_tipo.py`,
 together with `../akn/landing_legge_241_1990.html`.
@@ -100,3 +103,38 @@ tree. Used by `tests/unit/test_atto_intero_parti.py`.
 | `dm_241_1990_art3_serve_legge.html` | `decreto.ministeriale:1990-08-07;241~art3` | art. 3 of L. 7 agosto 1990, n. 241 (title «LEGGE 7 agosto 1990, n. 241»), 2026-11-02; trimmed to the head |
 
 Used by `tests/unit/test_atto_data_completa.py`.
+
+## Deferred entry into force (#172)
+
+Captured on 2026-11-16 from `https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:regio.decreto:1940-10-28;1443:1~artN!vig=2026-11-16`: `div.vigore`, the update link, the act line and `div.bodyTesto` (with the update notes), as in `tests/fixtures/visualex/normattiva`.
+
+| File | Article | What Normattiva served |
+|------|---------|------------------------|
+| `cpc_art7_vig_2026-11-16_rinvio_2027_trimmed.html` | art. 7 c.p.c. | version 10, «Testo in vigore dal 31-10-2025», carrying art. 27 d.lgs. 116/2017; notes (179) and (183) defer it to 31/10/2026 and 31/10/2027 |
+| `cpc_art7_vig_2025-10-30_versione_9_trimmed.html` | art. 7 c.p.c. | version 9 (01-01-2023 to 30-10-2025), the text in force (case A) |
+| `cpc_art15bis_vig_2026-11-16_rinvio_2027_trimmed.html` | art. 15-bis c.p.c. | version 1 (31-10-2021), the article inserted by the deferred art. 27 |
+| `cpc_art543_vig_2026-11-16_rinvio_2027_trimmed.html` | art. 543 c.p.c. | version 9 (26-11-2024), laid on the deferred «giudice competente» of version 7 (31-10-2021); notes (160), (179), (183) defer co. 2 n. 3 and co. 4 to 31/10/2027 |
+
+`cpc_aggiornamenti_rinvio_2027.json`: `aggiornamenti.leggi_aggiornamenti(dal=2017-07-13)` on 2026-11-16 for artt. 7, 15-bis and 543 c.p.c., reduced to versions, windows and the acts of each version. Used by `tests/unit/test_vigenza_differita.py`.
+
+The other provisions art. 27 amends (#177), captured on 2026-11-16 the same way, the URL ending in `!vig=2026-11-16` unless stated otherwise:
+
+| File | Article | What Normattiva served |
+|------|---------|------------------------|
+| `cpc_art765_vig_2026-11-16_note_ferme_al_2026_trimmed.html` | art. 765 c.p.c. | version 5 (31-10-2025), «cancelliere del giudice di pace», second period suppressed; notes (160) and (179) give 31/10/2025 and 31/10/2026, no 2027 note |
+| `cpc_art765_vig_2021-10-30_versione_3_trimmed.html` | art. 765 c.p.c. | `!vig=2021-10-30`: version 3 (04-07-1998 to 30-10-2021), «cancelliere del tribunale», the text in force |
+| `dispattcc_art73bis_vig_2026-11-16_rinvio_2027_trimmed.html` | art. 73-bis disp. att. c.c. | version 3 (31-10-2021), «ARTICOLO ABROGATO DAL D.LGS. 13 LUGLIO 2017, N. 116»; notes (37), (55), (58) defer the repeal to 31/10/2025, 2026 and 2027 («la proroga al … dell'entrata in vigore della presente abrogazione») |
+| `dispattcc_art73bis_vig_2021-10-30_versione_2_trimmed.html` | art. 73-bis disp. att. c.c. | `!vig=2021-10-30`: version 2 (04-07-1998 to 30-10-2021), the text in force |
+| `dlgs116_2017_art32_vig_2026-11-16_trimmed.html` | art. 32 d.lgs. 116/2017 | version 9 (12-6-2026): comma 3 «Le disposizioni dell'articolo 27 entrano in vigore il ((31 ottobre 2027))» |
+
+`rinvio_art27_aggiornamenti.json`: `aggiornamenti.leggi_aggiornamenti` on 2026-11-16, unreduced (rows keep their dispositions), for art. 765 c.p.c. and art. 73-bis disp. att. c.c. (`dal=2017-07-13`) and for art. 32 d.lgs. 116/2017 (`dal=2026-06-12`, `max_versioni=1`: its latest version, d.l. 100/2026 on comma 3).
+
+A spent comma read with no future date (review of #179), captured on 2026-11-17 the same way:
+
+| File | Article | What Normattiva served |
+|------|---------|------------------------|
+| `cpc_art567_vig_2026-11-17_riforma_2005_trimmed.html` | art. 567 c.p.c. | version 11 (01-01-2023); notes (115) and (116) move the entry into force of d.l. 35/2005, art. 2, comma 3-sexies from 1/1/2006 to 1/3/2006 |
+| `cpc_art569_vig_2026-11-17_riforma_2005_trimmed.html` | art. 569 c.p.c. | the text in force, with the same notes (115) and (116) |
+| `dl35_2005_art2_vig_2026-11-17_trimmed.html` | art. 2 d.l. 35/2005 | comma 3-sexies: «Le disposizioni di cui ai commi 3, lettera e), numeri da 2) a 43-bis), e 3-ter, lettere a-bis) … entrano in vigore il 1° marzo 2006» |
+
+`cpc567_aggiornamenti_dal_2005.json`: `aggiornamenti.leggi_aggiornamenti(dal=2005-03-14)` on 2026-11-17 for art. 567 c.p.c., unreduced.

@@ -3,17 +3,17 @@
   "name": "legal-it",
   "version": "3.0.0-beta.4",
   "display_name": "Legal IT — Diritto Italiano",
-  "description": "235 tool di calcolo legale italiano, normativa (Normattiva/EUR-Lex/Gazzetta Ufficiale), giurisprudenza (Cassazione, Corte Costituzionale, CeRDEF tributario, TAR/CdS, CGUE, Corte dei conti), orientamenti, recepimento UE→IT, verifica citazioni, delibere CONSOB, compliance GDPR e generazione atti.",
-  "long_description": "Server MCP completo per il diritto italiano. Include: calcoli rivalutazione/interessi, scadenze processuali, parcelle avvocati, risarcimento danni, decreto ingiuntivo, IRPEF/TFR, successioni, codice fiscale, privacy GDPR. Consultazione normativa da Normattiva e EUR-Lex, giurisprudenza di Cassazione da Italgiure, giurisprudenza tributaria da CeRDEF, sentenze TAR e Consiglio di Stato, sentenze CGUE via CELLAR SPARQL, annotazioni da Brocardi, delibere CONSOB.",
+  "description": "233 tool di calcolo legale italiano, normativa (Normattiva/EUR-Lex/Gazzetta Ufficiale), giurisprudenza (Cassazione, Corte Costituzionale, CeRDEF tributario, TAR/CdS, CGUE, Corte dei conti), orientamenti, recepimento UE→IT, verifica citazioni, delibere CONSOB, compliance GDPR e generazione atti.",
+  "long_description": "Server MCP completo per il diritto italiano. Include: calcoli rivalutazione/interessi, scadenze processuali, parcelle avvocati, risarcimento danni, decreto ingiuntivo, IRPEF/TFR, successioni, codice fiscale, privacy GDPR. Consultazione normativa da Normattiva e EUR-Lex, giurisprudenza di Cassazione da Italgiure, giurisprudenza tributaria da CeRDEF, sentenze TAR e Consiglio di Stato, sentenze CGUE via CELLAR SPARQL, delibere CONSOB.",
   "author": {
     "name": "capazme",
     "url": "https://github.com/capazme"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/capazme/mcp-legal-it.git"
+    "url": "https://github.com/LexCraft-IT/mcp-legal-it.git"
   },
-  "homepage": "https://github.com/capazme/mcp-legal-it",
+  "homepage": "https://github.com/LexCraft-IT/mcp-legal-it",
   "license": "MPL-2.0",
   "server": {
     "type": "python",
@@ -44,6 +44,8 @@
         "--with",
         "openpyxl>=3.1",
         "--with",
+        "pypdf>=7.0",
+        "--with",
         "cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'",
         "--with",
         "cryptography>=50; sys_platform != 'darwin' or platform_machine != 'x86_64'",
@@ -73,7 +75,6 @@
     "normattiva",
     "cassazione",
     "italgiure",
-    "brocardi",
     "CONSOB",
     "avvocato",
     "risarcimento",

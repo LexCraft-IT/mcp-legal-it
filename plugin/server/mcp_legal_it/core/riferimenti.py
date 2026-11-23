@@ -11,6 +11,8 @@ import re
 
 from mcp_legal_it.lib.visualex import resolve_atto, strip_leading_particles, known_act_names
 from mcp_legal_it.lib.visualex.article_suffixes import ARTICLE_SUFFIX_ALTERNATION as _SUFFISSI
+from mcp_legal_it.lib.visualex.map import (data_di_riferimento, fonte_locale, fonte_non_coperta, nome_ambiguo,
+                                             sigla_senza_atto)
 from mcp_legal_it.lib.visualex.models import ANNEX_ID, annex_reference
 
 # ---------------------------------------------------------------------------
@@ -174,15 +176,19 @@ def _parse_reference(reference: str) -> tuple[str, str]:
 # Act types as they appear in citations, spelled-out forms first so the
 # alternation never settles for the "L." inside "legge".
 _TIPO_ALT = (
-    r"decreto\s+del\s+presidente\s+della\s+repubblica"
+    # The acts of 1944-1948 (G-440): their URN kinds as Normattiva's own exports name them.
+    r"decreto\s+legislativo\s+del\s+capo\s+provvisorio\s+dello\s+stato"
+    r"|decreto\s+del\s+capo\s+provvisorio\s+dello\s+stato|decreto\s+luogotenenziale"
+    r"|D\.?\s?Lgs\.?\s?C\.?\s?P\.?\s?S\.?|D\.?\s?C\.?\s?P\.?\s?S\.?|D\.?\s?Lgt\.?"
+    r"|decreto\s+del\s+presidente\s+della\s+repubblica"
     r"|decreto\s+del\s+presidente\s+del\s+consiglio(?:\s+dei\s+ministri)?"
     r"|decreto\s+legislativo\s+luogotenenziale"
     r"|decreto\s+legislativo|decreto[-\s]legge|decreto\s+ministeriale"
-    r"|regio\s+decreto[-\s]legge|regio\s+decreto"
+    r"|regio\s+decreto[-\s]legislativo|regio\s+decreto[-\s]legge|regio\s+decreto"
     r"|legge\s+cost(?:ituzionale|\.)|legge"
     # Constitutional laws, royal decree-laws and lieutenancy decrees before the
     # forms they start with ("l.", "r.d.", "d.lgs."/"d.l.").
-    r"|L\.?\s?cost(?:ituzionale|\.)?|R\.?\s?D\.?\s?L\.?|D\.?\s?(?:Lgs|L)\.?\s?Lgt\.?"
+    r"|L\.?\s?cost(?:ituzionale|\.)?|R\.?\s?D\.?\s?Lgs\.?|R\.?\s?D\.?\s?L\.?|D\.?\s?(?:Lgs|L)\.?\s?Lgt\.?"
     r"|D\.?\s?Lgs\.?|D\.?P\.?C\.?M\.?|D\.?P\.?R\.?|DPR|R\.?D\.?"
     r"|D\.?\s?M\.?|D\.?\s?L\.?|L\.?"
 )
@@ -213,6 +219,19 @@ _TIPO_CANONICO = {
     "leggecostituzionale": "legge costituzionale",
     "rdl": "regio decreto legge",
     "regiodecretolegge": "regio decreto legge",
+    # regio.decreto.legislativo on Normattiva (r.d.lgs. 31 maggio 1946, n. 511, checked, G-440).
+    "rdlgs": "regio decreto legislativo",
+    "regiodecretolegislativo": "regio decreto legislativo",
+    # Measured on Normattiva's exports (11 Nov 2026): decreto.legislativo.del.capo.provvisorio
+    # .dello.stato (D.Lgs.C.P.S. 14 dicembre 1947, n. 1577), decreto.del.capo.provvisorio.dello
+    # .stato (D.C.P.S. 6 settembre 1946, n. 659), decreto.luogotenenziale (D.Lgt. 30 marzo 1946,
+    # n. 512).
+    "dlgscps": "decreto legislativo del capo provvisorio dello stato",
+    "decretolegislativodelcapoprovvisoriodellostato": "decreto legislativo del capo provvisorio dello stato",
+    "dcps": "decreto del capo provvisorio dello stato",
+    "decretodelcapoprovvisoriodellostato": "decreto del capo provvisorio dello stato",
+    "dlgt": "decreto luogotenenziale",
+    "decretoluogotenenziale": "decreto luogotenenziale",
     "dllgt": "decreto legislativo luogotenenziale",
     "dlgslgt": "decreto legislativo luogotenenziale",
     "decretolegislativoluogotenenziale": "decreto legislativo luogotenenziale",
@@ -248,6 +267,27 @@ _IT_SHORT_PATTERN = re.compile(
 )
 
 
+#: The years the act types of the two Luogotenenze and of the Capo provvisorio dello Stato can
+#: bear, as inclusive intervals (G-440). Measured on Normattiva's headings, 11 November 2026:
+#: «DECRETO LUOGOTENENZIALE» in 1915-1919 (the Great War's, e.g. D.Lgt. 17 maggio 1917, n. 1000;
+#: none in 1914 nor in 1920-1921) and in 1944-1946; the Capo provvisorio dello Stato's in
+#: 1946-1948. A «DCPS 5/2020» or a «D.Lgt. 12/1990» names no act: unresolved, never a type the
+#: reader would then ask Normattiva about.
+_ANNI_DEL_TIPO = {
+    "decreto luogotenenziale": ((1915, 1919), (1944, 1946)),
+    "decreto del capo provvisorio dello stato": ((1946, 1948),),
+    "decreto legislativo del capo provvisorio dello stato": ((1946, 1948),),
+}
+
+
+def _anno_possibile(tipo: str, anno: str) -> bool:
+    """Whether an act of *tipo* can bear *anno* (any year for a type outside ``_ANNI_DEL_TIPO``)."""
+    intervalli = _ANNI_DEL_TIPO.get(tipo)
+    if intervalli is None:
+        return True
+    return anno.isdigit() and any(dal <= int(anno) <= al for dal, al in intervalli)
+
+
 def _canonical_tipo(raw: str) -> str:
     """Map a cited act type to its canonical Normattiva name."""
     key = re.sub(r"[.\s-]", "", raw.lower())
@@ -274,17 +314,24 @@ def _split_eu_year_number(first: str, second: str) -> tuple[str, str]:
     return first, second
 
 
-def _resolve_act(act_name: str) -> dict | None:
+def _resolve_act(act_name: str, *, data: "str | None" = None) -> dict | None:
     """Resolve an act name to scraper parameters {tipo_atto, data, numero_atto}.
 
     Resolution chain:
-    1. resolve_atto() — hand-verified tables (ATTI_NOTI, codici, ATTI_DENOMINATI)
+    1. resolve_atto() — hand-verified tables (ATTI_NOTI, codici, ATTI_DENOMINATI, and the
+       sigle that follow the reference date *data*, today when None: SIGLE_DATATE)
     2. citation patterns — EU acts, then Italian acts in long and short form
 
     Returns None rather than guessing: a caller that cannot resolve an act must
-    say so, never cite a different one.
+    say so, never cite a different one. A regional or provincial law is never
+    resolved: its number read as a State law's («legge 65/2014 della Regione
+    Toscana», «legge 13/1997 della Provincia autonoma di Trento») would serve
+    another act in silence.
     """
-    result = resolve_atto(act_name)
+    data_di_riferimento(data)  # a malformed date is refused for every name, a regional one too
+    if fonte_locale(act_name):
+        return None
+    result = resolve_atto(act_name, data=data)
     if result:
         return result
 
@@ -306,12 +353,18 @@ def _resolve_act(act_name: str) -> dict | None:
     if long_match:
         tipo_raw, giorno, mese_it, anno, numero = long_match.groups()
         data = f"{anno}-{_MESI_IT[mese_it.lower()]}-{giorno.zfill(2)}"
-        return {"tipo_atto": _canonical_tipo(tipo_raw), "data": data, "numero_atto": numero}
+        tipo = _canonical_tipo(tipo_raw)
+        if not _anno_possibile(tipo, anno):
+            return None
+        return {"tipo_atto": tipo, "data": data, "numero_atto": numero}
 
     short_match = _IT_SHORT_PATTERN.match(candidate)
     if short_match:
         tipo_raw, numero, anno = short_match.groups()
-        return {"tipo_atto": _canonical_tipo(tipo_raw), "data": anno, "numero_atto": numero}
+        tipo = _canonical_tipo(tipo_raw)
+        if not _anno_possibile(tipo, anno):
+            return None
+        return {"tipo_atto": tipo, "data": anno, "numero_atto": numero}
 
     return None
 
@@ -323,8 +376,23 @@ def _suggest_acts(act_name: str, limit: int = 3) -> list[str]:
     )
 
 
-def _unresolved_act_error(act_name: str) -> str:
-    """Error text for an act the resolver could not identify, with near misses."""
+def _unresolved_act_error(act_name: str, *, data: "str | None" = None) -> str:
+    """Error text for an act the resolver could not identify, with near misses.
+
+    A source the resolver knows and no tool reads (``map.FONTI_NON_COPERTE``, a regional
+    law) is said to be out of coverage, with no near miss: a nearby act is never its text.
+    *data* is the reference date ``_resolve_act`` was given.
+    """
+    non_coperta = fonte_non_coperta(act_name)
+    if non_coperta:
+        return f"**Errore**: fonte non coperta — {non_coperta}"
+    senza_atto = sigla_senza_atto(act_name, data=data)
+    if senza_atto:
+        return f"**Errore**: {senza_atto}."
+    ambiguo = nome_ambiguo(act_name, data=data)
+    if ambiguo:
+        # A near miss would be one of the acts the name may mean: none is suggested.
+        return f"**Errore**: nome ambiguo — {ambiguo}."
     message = f"**Errore**: atto '{act_name}' non riconosciuto."
     suggestions = _suggest_acts(act_name)
     if suggestions:

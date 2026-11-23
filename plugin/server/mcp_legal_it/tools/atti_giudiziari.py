@@ -660,7 +660,8 @@ def decreto_ingiuntivo(
     il reddito supera tre volte la soglia dell'art. 76; dichiarazione di valore ex art. 14 co. 2); artt. 636 e 637
     co. 3 c.p.c. per la parcella con parere dell'Ordine. Verificata al 2026-09-29.
     Precisione: INDICATIVO per la bozza (richiede completamento con dati specifici del caso).
-    Chaining: → contributo_unificato() per calcolare le spese di giustizia → parcella_avvocato_civile()
+    Chaining: → contributo_unificato() per calcolare le spese di giustizia → modello_notula(tipo_procedimento=
+        'decreto_ingiuntivo') per il compenso del monitorio sulla sua tabella, fase unica (non parcella_avvocato_civile)
 
     Args:
         creditore: Nome o ragione sociale del creditore
@@ -769,7 +770,12 @@ Avv. [LEGALE]"""
             "motivi_pe": motivi_pe if provvisoria_esecuzione else None,
         },
         "termini": {
-            "opposizione": "40 giorni dalla notifica del decreto (50 se l'ingiunto risiede in altro Stato UE, 60 fuori UE) — art. 641 c.p.c.",
+            "opposizione": (
+                "nel termine fissato nel decreto, dalla notifica: di regola 40 giorni, riducibile fino a 10 o "
+                "aumentabile a 60 per giusti motivi; 50 giorni, riducibili fino a 20, se l'ingiunto risiede in "
+                "altro Stato UE; 60 giorni, tra 30 e 120, in altri Stati — art. 641 c.p.c.; dopo la scadenza solo "
+                "nei casi dell'art. 650 c.p.c."
+            ),
             "notifica_decreto": "entro 60 giorni dalla pronuncia (90 se all'estero), altrimenti il decreto perde efficacia — art. 644 c.p.c.",
         },
         "riferimento_normativo": (

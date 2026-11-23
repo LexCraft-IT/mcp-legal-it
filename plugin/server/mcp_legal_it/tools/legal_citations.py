@@ -68,6 +68,16 @@ from mcp_legal_it.core.cassazione import (  # noqa: F401 - re-exported
 
 
 
+#: The tools other than cite_law/fetch_law_article answer this for the codice deontologico
+#: forense: its text comes from the CNF's PDF, which they do not read.
+_SOLO_CITE_LAW_CNF = ("per il codice deontologico forense è disponibile solo il testo dei singoli articoli "
+                      "con cite_law(); il PDF integrale è pubblicato dal CNF su "
+                      "https://www.consiglionazionaleforense.it/codice-deontologico-forense")
+
+#: How a source is named in the «Fonte» line when its own name would not read well.
+_ETICHETTE_FONTE = {"cnf": "Consiglio nazionale forense (PDF del codice deontologico)"}
+
+
 def _format_result(article_result: dict, annotations_result: dict | None = None) -> str:
     """Format scraping results as markdown output."""
     parts = []
@@ -93,7 +103,9 @@ def _format_result(article_result: dict, annotations_result: dict | None = None)
     else:
         consolidato, avvisi_ue = None, []
     if text:
-        parts.append(f"**Fonte**: {source.title()} — {url}\n")
+        parts.append(f"**Fonte**: {_ETICHETTE_FONTE.get(source, source.title())} — {url}\n")
+        for avviso in article_result.get("avvisi_cnf") or []:
+            parts.append(f"**Attenzione**: {avviso}.\n")
         if consolidato:
             modifiche = consolidato.get("modificato_da") or []
             elenco = "; ".join(f"{m['atto']} (CELEX {m['celex']})" for m in modifiche)
@@ -110,12 +122,19 @@ def _format_result(article_result: dict, annotations_result: dict | None = None)
         elif source.startswith("normattiva") and (futura := versione_futura(url)):
             # The undated page showed tomorrow's text: today's is below, and the reader is told.
             parts.append(f"**Attenzione**: {avviso_versione_futura(futura)}.\n")
+        if article_result.get("rinvio"):
+            # Amendments whose entry into force a later act deferred (#172): said before the text.
+            from mcp_legal_it.lib.visualex.vigenza_differita import avviso as avviso_rinvio
+
+            parts.append(f"**Attenzione**: {avviso_rinvio(article_result['rinvio'])}.\n")
         if article_result.get("allegato"):
-            parts.append(f"**Testo tratto dall'{article_result['allegato']}** dell'atto, non dal suo articolato.\n")
+            parts.append(f"**Testo tratto da: {article_result['allegato']}** dell'atto, non dal suo articolato.\n")
         from mcp_legal_it.core.norme import AVVISO_NOTE_NON_LETTE, note_della_pagina
 
         note, note_non_lette, note_nel_testo = note_della_pagina(source, text, url,
                                                                  article_result.get("chiave_pagina"))
+        if source == "cnf":
+            note = article_result.get("note_aggiornamento") or []  # the CNF's notes on the amendments
         if note_non_lette:
             parts.append(f"**Attenzione**: {AVVISO_NOTE_NON_LETTE}.\n")
         # An article Normattiva splits into parts: which part this is, said before the text.
@@ -177,6 +196,12 @@ def _format_result(article_result: dict, annotations_result: dict | None = None)
 # ---------------------------------------------------------------------------
 
 
+def _avviso_sigla(act_info: "dict | None", testo: str) -> str:
+    """*testo* with the notice of a sigla that follows the date (LI-086) as its first line, if any."""
+    avviso = (act_info or {}).get("avviso")
+    return f"**Attenzione**: {avviso}.\n\n{testo}" if avviso else testo
+
+
 async def _cite_law_impl(reference: str, include_annotations: bool = False, formato: str = "markdown",
                          versione: str = "vigente") -> str:
     """Implementation of cite_law (testable without MCP wrapper)."""
@@ -218,6 +243,8 @@ async def _cite_law_impl(reference: str, include_annotations: bool = False, form
     brocardi_md = ""
     if annotate and split_annex(article):
         brocardi_md = "\n\n**Annotazioni Brocardi**: non disponibili per gli allegati"
+    elif annotate and nv.norma._is_cnf():
+        brocardi_md = "\n\n**Annotazioni Brocardi**: non disponibili per il codice deontologico forense"
     elif annotate:
         try:
             brocardi = await fetch_brocardi(
@@ -230,7 +257,7 @@ async def _cite_law_impl(reference: str, include_annotations: bool = False, form
         except Exception as e:
             brocardi_md = f"\n\n**Annotazioni Brocardi**: errore — {e}"
 
-    return _format_result(article_result) + brocardi_md
+    return _avviso_sigla(act_info, _format_result(article_result) + brocardi_md)
 
 
 async def _fetch_law_article_impl(act_type: str, article: str, date: str = "", act_number: str = "") -> str:
@@ -265,9 +292,11 @@ async def cite_law(
 ) -> str:
     """Recupera il testo ufficiale di una norma di legge. USARE SEMPRE prima di citare qualsiasi norma.
 
-    Fonti: Normattiva (leggi italiane), EUR-Lex (regolamenti/direttive UE), Brocardi (annotazioni).
+    Fonti: Normattiva (leggi italiane), EUR-Lex (regolamenti/direttive UE), CNF (codice deontologico
+    forense); annotazioni Brocardi solo se attive in questa installazione.
 
-    Dopo questo tool: cerca_brocardi() per approfondimenti dottrinali, cerca_giurisprudenza() per precedenti.
+    Dopo questo tool: giurisprudenza_su_norma() o cerca_giurisprudenza() per precedenti.
+    Approfondimenti dottrinali con cerca_brocardi(), se disponibile.
     Restituisce: testo ufficiale dell'articolo da Normattiva/EUR-Lex con URL fonte.
 
     Esempi di riferimenti validi:
@@ -280,6 +309,8 @@ async def cite_law(
         (anche "allegato I.7 art. 30 D.Lgs. 36/2023")
       - "Allegato III AI Act" — allegato di un atto UE, restituito per intero
         (punti e lettere vengono ignorati, come i commi)
+      - "art. 68 codice deontologico forense" (anche "NCDF") — testo vigente dal PDF
+        consolidato del CNF, con le note sulle modifiche; solo testo vigente
 
     Un articolo che l'atto non ha produce un errore ("articolo N non trovato"), mai il
     testo di un altro articolo: Normattiva risponde a un numero inesistente con l'art. 1
@@ -287,7 +318,7 @@ async def cite_law(
     l'errore dice "verifica non disponibile" e il testo non viene presentato.
 
     Senza "allegato" si ottiene sempre l'articolo del corpo dell'atto. Se il testo
-    proviene da un allegato, l'output lo dichiara ("Testo tratto dall'Allegato ...").
+    proviene da un allegato, l'output lo dichiara ("Testo tratto da: Allegato ...").
 
     I numeri di paragrafo (n. N, co. N, comma N) vengono automaticamente
     ignorati: "art. 4 n. 11 GDPR" equivale a "art. 4 GDPR". Eccezione: un articolo
@@ -307,7 +338,8 @@ async def cite_law(
                    "art. 6 D.Lgs. 231/2001", "art. 117 Costituzione",
                    "considerando 42 GDPR", "art. 4 n. 11 GDPR"
         include_annotations: Includi anche le annotazioni Brocardi (ratio legis, spiegazione,
-                             massime giurisprudenziali). Default False.
+                             massime giurisprudenziali), se attive in questa installazione;
+                             altrimenti una riga lo dice. Default False.
         formato: "markdown" (default) oppure "json": oggetto con riferimento, articolo,
                  atto{tipo_atto, data, numero_atto, descrizione}, url, urn, fonte, allegato,
                  testo, errore, data_consultazione, avvisi, upcoming. "avvisi" (lista, vuota se
@@ -409,6 +441,8 @@ async def _cerca_brocardi_impl(reference: str) -> str:
     act_info = _resolve_act(act_name)
     if not act_info:
         return _unresolved_act_error(act_name)
+    if Norma(tipo_atto=act_info["tipo_atto"])._is_cnf():
+        return f"**Errore Brocardi**: {_SOLO_CITE_LAW_CNF}"
 
     try:
         result = await fetch_brocardi(
@@ -420,7 +454,7 @@ async def _cerca_brocardi_impl(reference: str) -> str:
     if result.error:
         return f"**Errore Brocardi**: {result.error}"
 
-    parts = [result.to_markdown()]
+    parts = [_avviso_sigla(act_info, result.to_markdown())]
 
     # Append Cassazione references for Italgiure cross-linking. Italgiure indexes only a moving
     # window of recent years: older decisions are listed apart, because leggi_sentenza cannot
@@ -488,6 +522,8 @@ async def _fetch_act_index_impl(reference: str) -> str:
         data=act_info.get("data", ""),
         numero_atto=act_info.get("numero_atto", ""),
     )
+    if norma._is_cnf():
+        return f"**Errore**: {_SOLO_CITE_LAW_CNF}"
     try:
         result = await _fetch_act_index_scraper(norma)
     except Exception as e:
@@ -504,7 +540,7 @@ async def _fetch_act_index_impl(reference: str) -> str:
     for entry in entries:
         lines.append(f"- {entry}")
     lines.append(f"\n*Codice redazionale*: `{result.get('codice_redazionale', '')}`")
-    return "\n".join(lines)
+    return _avviso_sigla(act_info, "\n".join(lines))
 
 
 @mcp.tool(tags={"normativa"}, output_schema=None)
@@ -666,6 +702,8 @@ async def _fetch_full_act_impl(reference: str, da_carattere: int = 1) -> str:
 
     if norma._is_eurlex():
         return "Per atti UE usare download_law_pdf() — il testo integrale è disponibile solo in PDF."
+    if norma._is_cnf():
+        return f"**Errore**: {_SOLO_CITE_LAW_CNF}"
 
     try:
         result = await _full_act_text(norma, da_carattere)
@@ -690,8 +728,10 @@ async def _fetch_full_act_impl(reference: str, da_carattere: int = 1) -> str:
         f"**Dimensione**: {len(text):,} caratteri\n",
     ]
     # What the reading could not carry (parts not read, parts published as images only),
-    # in every window, before the text.
-    lines.extend(f"**Avviso**: {avviso}\n" for avviso in result.get("avvisi") or ())
+    # in every window, before the text; first, the notice of a sigla that follows the date
+    # (LI-086). «**Avviso**:», which the citation gate skips when it reads a window.
+    avvisi = ([act_info["avviso"]] if act_info.get("avviso") else []) + list(result.get("avvisi") or ())
+    lines.extend(f"**Avviso**: {avviso}\n" for avviso in avvisi)
     if da_carattere == 1 and len(text) <= _FULL_ACT_WINDOW:
         # Fits in one window: the answer is the one it has always been.
         lines.append(text)
@@ -830,6 +870,9 @@ async def _download_law_pdf_impl(reference: str) -> str:
         numero_atto=act_info.get("numero_atto", ""),
     )
 
+    if norma._is_cnf():
+        return f"**Errore**: {_SOLO_CITE_LAW_CNF}"
+
     ensure_private_dir(_PDF_OUTPUT_DIR)
     filename = _safe_filename(act_name) + ".pdf"
     filepath = os.path.join(_PDF_OUTPUT_DIR, filename)
@@ -872,14 +915,14 @@ async def _download_law_pdf_impl(reference: str) -> str:
         size = os.path.getsize(filepath)
 
         avvisi = "".join(f"\n**Avviso**: {avviso}" for avviso in result.get("avvisi") or ())
-        return (
+        return _avviso_sigla(act_info, (
             f"**PDF generato** ({title})\n\n"
             f"File: `{filepath}`\n"
             f"Fonte: Normattiva — {url}\n"
             f"Dimensione: {size:,} bytes\n"
             f"Nota: PDF generato dal testo ufficiale (non il PDF originale Normattiva)"
             f"{avvisi}"
-        )
+        ))
     except Exception as e:
         return f"**Errore** generazione PDF: {e}"
 
@@ -1060,7 +1103,20 @@ def _norma_misquote(reference: str, article_text: str) -> bool:
 
 
 async def _verifica_norma(reference: str) -> tuple[str, str]:
-    """Verify a NORMA reference. Returns (verdetto, nota)."""
+    """Verify a NORMA reference. Returns (verdetto, nota).
+
+    A sigla that follows the date (LI-086) adds its notice to the note, whatever the verdict.
+    """
+    verdetto, nota = await _verifica_norma_testo(reference)
+    _, act_name = _parse_reference(reference)
+    info = _resolve_act(act_name) if act_name else None
+    if info and info.get("avviso"):
+        nota += f" Attenzione: {info['avviso']}."
+    return verdetto, nota
+
+
+async def _verifica_norma_testo(reference: str) -> tuple[str, str]:
+    """``_verifica_norma`` before the notice of a dated sigla."""
     data, esito = await _cite_law_lookup(reference)
     if esito == ARTICLE_NOT_FOUND:
         return "inesistente", f"L'articolo non esiste nell'atto citato: {data['errore']}."
@@ -1094,6 +1150,12 @@ async def _verifica_norma(reference: str) -> tuple[str, str]:
         return "metadati discordanti", nota
 
     nota = f"Fonte: {fonte}" if fonte else "Testo ufficiale reperito."
+    if r := data.get("rinvio"):
+        # An entry into force the notes defer past today (#172): said in every case, also when
+        # the table of updates could not be read to tell which text is in force.
+        from mcp_legal_it.lib.visualex.vigenza_differita import nota_verifica
+
+        nota += f" Attenzione: {nota_verifica(r)}."
     if (prossima := data.get("upcoming")) and prossima.get("valid_from"):
         # In force today, with a later version already published: still verified, and said.
         cambio = "abrogato" if prossima.get("change") == "abrogated" else "modificato"

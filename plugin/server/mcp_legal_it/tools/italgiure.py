@@ -560,10 +560,15 @@ async def _giurisprudenza_su_norma_impl(
     num_found = data.get("response", {}).get("numFound", 0)
     highlighting = data.get("highlighting", {})
     if not docs:
-        return SearchResult(success=False, source="italgiure", error_type="no_results", results_text=f"Nessuna decisione trovata per il riferimento: {riferimento}")
+        testo = f"Nessuna decisione trovata per il riferimento: {riferimento}"
+        if avviso := _avviso_sigla(riferimento):
+            testo += f"\n\n*Attenzione: {avviso}.*"
+        return SearchResult(success=False, source="italgiure", error_type="no_results", results_text=testo)
     start_idx = pagina * max_risultati + 1
     end_idx = start_idx + len(docs) - 1
     lines = [f"**Trovate {num_found} decisioni su**: _{riferimento}_ (mostro {start_idx}-{end_idx})\n"]
+    if avviso := _avviso_sigla(riferimento):
+        lines.append(f"*Attenzione: {avviso}.*\n")
     if not norma_is_qualified(riferimento):
         lines.append(
             "*Attenzione: il riferimento non indica il codice o l'atto. La ricerca trova ogni "
@@ -774,6 +779,13 @@ async def giurisprudenza_su_norma(
     return result.to_str() if isinstance(result, SearchResult) else result
 
 
+def _avviso_sigla(riferimento: str) -> "str | None":
+    """The notice of a sigla that follows the date (LI-086) the reference names, else None."""
+    _, atto = _parse_articolo_riferimento(riferimento)
+    info = resolve_atto(atto) if atto else None
+    return (info or {}).get("avviso")
+
+
 def _parse_articolo_riferimento(riferimento: str) -> tuple[str, str]:
     """Extract (articolo, atto) from a legal reference like 'art. 2043 c.c.'.
 
@@ -850,7 +862,7 @@ async def _giurisprudenza_articolo_impl(
                 else f"Brocardi: nessuna massima disponibile per {riferimento} (o fonte non raggiungibile)"
             )
             fallback.results_text = (
-                f"*{why}: ricerca per citazione dell'articolo su Italgiure.*\n\n{fallback.results_text}"
+                f"*{why}. Ricerca per citazione dell'articolo su Italgiure.*\n\n{fallback.results_text}"
             )
         return fallback
 
@@ -1008,9 +1020,11 @@ async def giurisprudenza_articolo(
     anno_a: int = 0,
     max_risultati: int = 5,
 ) -> str:
-    """Cerca giurisprudenza su un articolo usando le massime Brocardi come guida.
+    """Cerca giurisprudenza su un articolo: le decisioni di Cassazione che lo citano.
 
-    Workflow: recupera le massime giurisprudenziali da Brocardi per l'articolo indicato,
+    Senza Brocardi (non attivo per impostazione predefinita) cerca su Italgiure le decisioni
+    che citano l'articolo, come giurisprudenza_su_norma, e lo dichiara in una riga.
+    Con Brocardi attivo: recupera le massime giurisprudenziali da Brocardi per l'articolo indicato,
     poi usa il testo dei principi di diritto come query di ricerca su Italgiure, limitata alle
     decisioni che citano l'articolo (senza raffinamento automatico). Inoltre elenca (estremi e
     materia, non il testo: usare leggi_sentenza) le sentenze Cassazione citate nelle massime.

@@ -57,7 +57,7 @@ descrizione di ogni tool.
 
 | Tool | Firma | Descrizione |
 |------|-------|-------------|
-| `cite_law` | `cite_law(reference: str, include_annotations: bool = False, formato: str = "markdown")` | Testo ufficiale di una norma da Normattiva/EUR-Lex. Entry point principale per citazioni; formato="json" per output strutturato; anche allegati ("art. 30 dell'allegato I.7 al D.Lgs. 36/2023", "Allegato III AI Act"). |
+| `cite_law` | `cite_law(reference: str, include_annotations: bool = False, formato: str = "markdown")` | Testo ufficiale di una norma da Normattiva/EUR-Lex (codice deontologico forense: dal PDF del CNF). Entry point principale per citazioni; formato="json" per output strutturato; anche allegati ("art. 30 dell'allegato I.7 al D.Lgs. 36/2023", "Allegato III AI Act"). |
 | `fetch_law_article` | `fetch_law_article(act_type: str, article: str, date: str = "", act_number: str = "")` | Recupero a basso livello del testo di un articolo con parametri espliciti; `article` accetta anche "allegato I.7 art. 30" o "Allegato III". |
 | `fetch_law_annotations` | `fetch_law_annotations(act_type: str, article: str, date: str = "", act_number: str = "")` | Solo annotazioni Brocardi per un articolo specifico. |
 | `cerca_brocardi` | `cerca_brocardi(reference: str)` | Annotazioni complete Brocardi: ratio, spiegazione, massime strutturate con riferimenti Cassazione. |
@@ -607,7 +607,7 @@ descrizione di ogni tool.
 | Tool | Firma | Descrizione |
 |------|-------|-------------|
 | `esporta_atto_docx` | `esporta_atto_docx(testo: str, titolo: str = 'Atto', autore: str = '')` | Esporta un testo (atto, parere, bozza) in formato DOCX (Microsoft Word). |
-| `genera_modello_atto` | `genera_modello_atto(tipo_atto: str, parametri: dict \| None = None)` | Restituisce i metadati per comporre un atto legale: struttura, campi obbligatori, |
+| `genera_modello_atto` | `genera_modello_atto(tipo_atto: str, parametri: dict \| None = None)` | Restituisce i metadati per comporre un atto legale: campi obbligatori, tool di calcolo, tool che genera la bozza (se esiste), riferimenti normativi e avvertenze. |
 | `lista_categorie_atti` | `lista_categorie_atti()` | Restituisce le categorie di atti disponibili con il conteggio per ciascuna. |
 
 ---

@@ -359,6 +359,9 @@ async def _orientamento_su_norma_impl(
             ),
         )
 
+    # A sigla that follows the date (LI-086): which act it names today, said under the count.
+    _, atto_str = _parse_articolo_riferimento(riferimento)
+    avviso = (resolve_atto(atto_str) or {}).get("avviso") if atto_str else None
     text = _assemble_map(
         titolo=f"Orientamento giurisprudenziale — {riferimento}",
         base_q=riferimento,
@@ -367,6 +370,7 @@ async def _orientamento_su_norma_impl(
         docs=docs,
         ss_uu_num=ss_uu_num,
         ss_uu_docs=ss_uu_docs,
+        extra_notes=[f"*Attenzione: {avviso}.*"] if avviso else None,
     )
     return SearchResult(
         success=True, source="italgiure", num_found=num_found, results_text=text,
@@ -647,9 +651,10 @@ async def mappa_orientamento(
     archivio: str = "tutti",
     anno_da: int = 0,
 ) -> str:
-    """Mappa DESCRITTIVA completa: ancoraggio Brocardi + orientamenti Cassazione su un articolo.
+    """Mappa DESCRITTIVA completa degli orientamenti Cassazione su un articolo.
 
-    Workflow orchestrato:
+    Workflow orchestrato (il passo 1 solo con Brocardi attivo, che non lo è per impostazione
+    predefinita; altrimenti la mappa lo dice in una riga e parte dal passo 3):
     1. recupera le massime riportate da Brocardi per l'articolo (ancoraggio; le massime di
        Brocardi non misurano il consolidamento; se Brocardi non risponde o non ha massime
        la mappa lo dichiara)

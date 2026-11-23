@@ -20,6 +20,91 @@ described in those sections, not repeated here. Upgrading from 2.x:
 [`docs/migration/2.x-to-3.0.md`](docs/migration/2.x-to-3.0.md).
 
 ### Added
+- **Sigle and nicknames of testi unici and laws, second pass (G-440).** «TUED» / «T.U.E.D.» (testo
+  unico edilizia, so «art. 36-bis TUED» reads), «TUEs» / «TUEspr» (espropri), «TUSG» and «T.U. spese
+  di giustizia» (d.P.R. 115/2002), «TUDA» (d.P.R. 445/2000), «T.U. accise» (d.lgs. 504/1995), «TULD»
+  (d.P.R. 43/1973, repealed), «TUSMA» (d.lgs. 208/2021), «TUSMAR» (d.lgs. 177/2005), «TUOM» (d.P.R.
+  90/2010), «TUIMM», «TUStup», «TU ambiente» / «TUAmb», «St. lav.», «L.F.», «l. proc. amm.», «cod.
+  ass.», «cod. priv.», «codice Urbani» / «CBCP», «legge Madia», «legge Balduzzi», «decreto
+  whistleblowing», «decreto dignità», «decreto Salva Casa»; every identity checked on Normattiva.
+  Names more than one act answers are refused on purpose with «nome ambiguo» and no near-miss
+  suggestion (`NOMI_AMBIGUI`): «TUS» («TUIVA» and «T.U. registro» were refused here too, until
+  the date rule of LI-086 below), «T.U. rinnovabili», «decreto FER» / «CER»,
+  «decreto trasparenza», «decreto Semplificazioni», «riforma Cartabia», «S.L.», «TUI»,
+  «L.P.A.», «cod. app.» (three codes, 2006, 2016, 2023), the short «testo unico dei servizi di media
+  audiovisivi» (2021 or 2005). «TUE» stays the Treaty on European Union.
+- **The act types of the Luogotenenze and of the Capo provvisorio dello Stato (G-440).** Decreti
+  luogotenenziali («D.Lgt.», «d. lgt.»), decreti del Capo provvisorio dello Stato («D.C.P.S.») and
+  decreti legislativi del Capo provvisorio dello Stato («D.Lgs.C.P.S.»), with the URN kinds
+  Normattiva's own exports give them, each checked against its page's heading; `risolvi_atto` dates
+  them from the heading (`INDICATIVO`, as the d.lgs.lgt.). «legge Basevi» is the D.Lgs.C.P.S. 14
+  dicembre 1947, n. 1577. Cited as another type («d.lgs. 1577/1947», «r.d.lgs. 512/1946») the act
+  stays refused, and the refusal names it. A year the type cannot bear (a D.Lgt. outside 1915-1919
+  and 1944-1946, the two Luogotenenze, or a D.C.P.S. or D.Lgs.C.P.S. outside 1946-1948) names no
+  act.
+- **Act spellings from an external citation corpus (G-440).** EU regulations by name: «MAR» (also «Regolamento
+  MAR», «Regolamento europeo sugli abusi di mercato»), «MiCAR», «MiFIR», «Regolamento Prospetto»,
+  «Regolamento DLT», «CSDR», «Regolamento SAFE», «Regolamento sull'IA»; any «Regolamento <nickname>»
+  whose nickname is already an EU regulation of the table («Regolamento DORA», «Regolamento eIDAS»),
+  never a «regolamento condominiale» or a directive. «MAR» is never read from a date's «mar.».
+  Testi unici written «t.u. …» («t.u. edilizia», «T.U. bancario»), more spellings of the codes
+  («codice della crisi e dell'insolvenza», «cod. contratti pubblici», «preleggi al codice civile»,
+  «Costituzione italiana»), «Codice Rosso» (l. 69/2019), «Legge Capitali» (l. 21/2024), and the act
+  type «regio decreto legislativo» / «r.d.lgs.», which `api.risolvi_atto` now dates from the page's
+  title (`TIPI_ATTO_VERIFICATI`, `ESATTO`). Declared uncovered sources, each with its identity
+  and no near-miss suggestion: the Consob regulations Emittenti (delibera 11971/1999), OPC (17221)
+  and Mercati (20249); the CEDU and its Protocols 1, 4 and 7 (not served from the 1955 law: its text
+  is the original one, renumbered since); the Carta sociale europea and the treaties of Aarhus,
+  ICCPR, the Convention on the Rights of the Child, CEDAW and MARPOL. The citation gate flags them;
+  a «protocollo d'intesa» or a «regolamento condominiale» stays out.
+- **CCD2 and the testo unico della giustizia tributaria by name (G-440).** «CCD2», «CCD 2», «CCD II»
+  resolve to dir. (UE) 2023/2225; «testo unico della giustizia tributaria», «TU giustizia tributaria»,
+  «TUGT» resolve to the annex of d.lgs. 175/2024 (part :1). The «Norme integrative per i giudizi
+  davanti alla Corte costituzionale», a deliberation Normattiva does not publish, are a declared
+  uncovered source: `cite_law` says so without suggesting a nearby act, and the citation gate
+  flags them as out of coverage.
+- **The codice deontologico forense in `cite_law`**, read live from the consolidated PDF
+  the Consiglio nazionale forense publishes (the code is a CNF act: Normattiva and Brocardi
+  do not carry it). `"art. 68 codice deontologico forense"`, `"art. 25-bis NCDF"`
+  resolve («CDF» does not: it may be the Carta dei diritti fondamentali);
+  `fetch_law_article` and `verifica_citazioni` read it too.
+  - **What is served.** The article in force, its commi and letters, and the CNF's own
+    notes on each amendment (deliberation, Gazzetta, date in force, often the previous
+    text) as `note_aggiornamento`; their marks stay in the text («riscossione⁽³⁾.»), so
+    the reader sees which comma each note is about. Grade `INDICATIVO`, with the notice
+    that the deliberations published in the Gazzetta Ufficiale are authentic (art. 3 c. 4
+    l. 247/2012). `versione="originale"`/`"futura"`, the index, the whole act, the PDF
+    download, `storia_norma` and Brocardi are refused with a pointer to `cite_law`.
+  - **Untrusted input.** The PDF is read only from the CNF's host, up to 10 MB and 150
+    pages, text only (`lib/cnf`). The extraction stops itself past 50,000 text runs,
+    2 million characters or 30 s, checked at every run and every page (the 2026 edition:
+    1,770 runs, half a second); past 35 s the call gives up, though a stall inside pypdf
+    between two runs cannot be stopped and its thread runs on. The reading checks itself:
+    the document must name itself as the code, headings must be in order, the index must
+    list exactly the body's articles with the same headings, every note mark must have its
+    one note, a bold line must be an upper-case title, a note may go on only at the head
+    of the next page's notes (below that page's text, never a running header), text set
+    apart from an article is not taken as its own, the last article may go on to a new
+    page only mid-sentence or with its next comma (an annex or a signature after it is
+    refused), and no line may fall outside the shapes the code uses. Anything else is a
+    refusal (`verifica_non_disponibile`, said again for ten minutes without a new
+    download), never another article's text.
+  - **Provenance and cache.** New host `www.consiglionazionaleforense.it` (`_egress.py`,
+    `SECURITY.md`), dataset `cnf` in `fonti_consultate`; the code read is kept a day in
+    `cnf_codice_deontologico/` (`docs/cache-inventory.md`). New dependency:
+    `pypdf>=7.0` (BSD-3-Clause; locked at 7.0.0, no known advisory — the DoS fixes on
+    malformed PDFs end at 6.21.4).
+  - **Not in force yet.** The CNF may publish an amended text before it comes into force
+    (sixty days after the Gazzetta): when the page's «in vigore dal» date is later than
+    today, the article is served as `not_in_force` with `upcoming.valid_from`, and
+    `verifica_citazioni` answers «non in vigore»; a date the page does not give readably
+    is said in a notice.
+  - **Offline test on the real layout.** `tests/fixtures/cnf/runs.json.gz` keeps the text
+    runs of the CNF's 2026 PDF (regenerated by `scripts/cnf_runs_fixture.py`), so the
+    suite reads the real typography, not only PDFs built for the tests.
+  - **Citation gate.** The codice deontologico forense is no longer an uncovered source:
+    a `cite_law` of its article covers the citation (other professions' codes, and «CDF»
+    or «c.d.f.», still are).
 - **`storia_norma`: an article's history as an MCP tool** (#115; 235 tools). A thin
   wrapper (ADR-001) over `api.modifiche_articolo`: `storia_norma(riferimento, dal, al,
   max_versioni=20, formato="testo"|"json")`.
@@ -121,10 +206,10 @@ described in those sections, not repeated here. Upgrading from 2.x:
   art. 1). It returns an `AttoRisolto`: `data` («1993-09-01»), `urn`, `url`,
   `precisione` and `esito`, in the new closed vocabulary `EsitoAtto`.
   - **Precisione.** The date is `ESATTO` when the page's title names this act's
-    type, year and number, for the seven types the new constant
+    type, year and number, for the eight types the new constant
     `api.TIPI_ATTO_VERIFICATI` declares (legge, d.lgs., d.l., d.P.R., r.d., r.d.l.,
-    l. cost.). VisuaLex's title reader knows two more, the regio decreto
-    legislativo and the bare «decreto», which this constant leaves out. It is
+    r.d.lgs., l. cost.). VisuaLex's title reader knows one more, the bare «decreto»,
+    which this constant leaves out. It is
     `INDICATIVO` when it comes from the page's ELI date (DPCM, decreto ministeriale).
   - **Esiti.**
     - A full date whose day is not the act's is `ambiguo`, with the act Normattiva
@@ -395,6 +480,67 @@ described in those sections, not repeated here. Upgrading from 2.x:
   `docs/tool-tags.md`.
 
 ### Changed
+- **The sigle of the fiscal testi unici follow the date (decision LI-086).** «TUIR», «TUR» / «T.U.
+  registro», «TUIVA» / «TU IVA» / «testo unico iva» name the old act until the new testo unico
+  applies, with a one-line notice («dal 1° gennaio 2027 si applica il d.lgs. 19 giugno 2026, n. 117
+  (testo unico delle imposte sui redditi)»), and the new testo unico (the annex of its decree) from
+  that day: d.lgs. 117/2026 (TUIR), 123/2025 (registro), 10/2026 (IVA), all from 1 January 2027,
+  each date read on Normattiva. «TUIVA» and «T.U. registro» are no longer refused as ambiguous.
+  «TU successioni» keeps naming d.lgs. 346/1990, with the registro notice until 2027 (the new testo
+  unico repeals most of it, but the sigla is not its own). «TUGT» / «testo unico della giustizia
+  tributaria» keeps naming d.lgs. 175/2024 and says it applies from 1 January 2027 (art. 4 co. 3 d.l.
+  200/2025). The notice reaches `cite_law` (first line; first in `avvisi` in JSON),
+  `verifica_citazioni`, `fetch_full_act`, `fetch_act_index`, `download_law_pdf`,
+  `giurisprudenza_su_norma`, `orientamento_su_norma` and `api.testo_articolo`. The date is today
+  (`LEGAL_TODAY` pins it); the resolver also takes one (`resolve_atto(name, data=…)`), which no
+  MCP tool passes yet; a malformed one is refused with `ValueError` whatever the name. With a
+  date, «codice dei contratti pubblici», «codice degli appalti» and «cod. app.» name the code in
+  force that day (d.lgs. 163/2006, 50/2016, 36/2023); without one they resolve as before.
+  **Library** (additive): `EsitoRiferimento.avvisi` and `IndiceAtto.avvisi` carry the notice, so
+  `api.leggi_riferimento`, `api.indice_atto` and `api.testo_atto` say it as `api.testo_articolo`
+  does; `api.catalogo_alias()` gives each dated sigla with today's act, and a preset whose text
+  is an annex of its decree carries `allegato` («tugt» now, «tuir» from 2027).
+- **«TUA» is now refused as ambiguous (decision LI-086).** It names both the codice dell'ambiente
+  (d.lgs. 152/2006) and the testo unico accise (d.lgs. 504/1995) at the same date; the refusal
+  names both. «codice dell'ambiente», «testo unico ambientale», «TU ambiente» and «d.lgs.
+  152/2006» resolve as before.
+- **Regional laws are a source not covered (decision LI-086).** «l.r. Toscana 65/2014», «legge
+  regionale 12 marzo 2015, n. 3», «L.R. n. 3/2015» answer «fonte non coperta» and are never read as
+  a State law, in any spelling of «legge» the State patterns read: «legge 10 novembre 2014, n. 65
+  della Regione Toscana», «L. 65/2014 (Toscana)», «legge 65/2014 Reg. Toscana» no longer resolve
+  to the legge 65/2014. No Normattiva address is built or fetched for a regional act type. The citation
+  gate warns on every regional law an answer cites, with the advice to check it on the Region's
+  official bulletin or database («fuori copertura» on the line lets it through). README, server
+  instructions and the `fonti-diritto-italiano` reference state the limit. The laws of the Province
+  autonome di Trento e di Bolzano have the same guard: «l.p. 13/1997», «legge 13/1997 della
+  Provincia autonoma di Trento», «L. 13/1997 Prov. Trento», «… PAT», «… TN», «… (BZ)» answer «fonte
+  non coperta» (TN and BZ only right after the number or in brackets) and
+  no longer resolve to the State's legge 13/1997; the gate warns on them too. «l.p.a.» and «l.
+  proc. amm.» keep their meaning. Both guards read a dash, a slash or a bracket before the Region
+  or province and «dell'», «del», «di» («L. 65/2014 – Toscana», «legge 13/1997 dell'Alto Adige»).
+- **`opposizione_decreto_ingiuntivo`: the art. 645 co. 3 c.p.c. warning (decision LI-086).** The
+  provision is still quoted as written, and the warning adds that on Normattiva the art. 163-bis,
+  secondo comma, it refers to is shown as repealed by d.lgs. 149/2022, as amended by l. 197/2022.
+- **Brocardi.it is off by default (decision LI-079).** Brocardi.it is the server's only
+  private source (doctrinal notes and case-law abstracts, never the text of a norm), and it is
+  now off unless switched on; every other source stays on. With nothing set no request reaches
+  brocardi.it, `cerca_brocardi` and `fetch_law_annotations` are not listed (233 tools instead
+  of 235), and `cite_law(include_annotations=True)`, `giurisprudenza_articolo` and
+  `mappa_orientamento` say in one line, where the Brocardi part would have been, «Brocardi non
+  attivo in questa installazione». The server instructions, skills, agents and commands take
+  the Italgiure path by default (`giurisprudenza_su_norma`, `cerca_giurisprudenza` →
+  `leggi_sentenza`) and use Brocardi only if available. **To switch it on:**
+  `LEGAL_BROCARDI=on` (or `1`, `true`, `yes`) in the environment of the server or of Claude
+  Code (also the `env` block of `~/.claude/settings.json`), or in code
+  `crea_server(brocardi=True)`, `configurazione(brocardi=True)` or
+  `_brocardi_switch.set_default(True)`; `crea_server()` now follows the process
+  (`brocardi=None`). `LEGAL_BROCARDI=off` (or `0`, `false`, `no`) keeps it off and code cannot
+  switch it back on (`ValueError`); any other value counts as off, is reported on stderr at
+  start-up and named by `stato_server`, whose `brocardi.stato` says `spento_per_default`,
+  `acceso`, `spento_esplicito` or `valore_non_riconosciuto`. The stock server now hides the
+  `solo_brocardi` tools per request (a visibility transform), so a server built with
+  `crea_server(brocardi=True)` lists and calls them. `release.py` counts the default surface
+  (233) for the manifests.
 - **`analisi-sinistro`: patrimonial danno differenziale in workplace accidents (decision
   LI-072).** Section 2-bis now says that, against the employer, only the patrimonial
   differential is due, computed on homogeneous heads: the civil-law lucro cessante minus the
@@ -831,6 +977,16 @@ described in those sections, not repeated here. Upgrading from 2.x:
   Sunday 15/03/2026 instead of Monday 16/03/2026. The result carries a `nota`.
 
 ### Security
+- **Three dependencies of the plugin lock past advisories published on 16 November 2026.**
+  dnspython 2.9.0 → 2.9.2 (CVE-2026-128089), opentelemetry-api 1.45.1 → 1.45.2
+  (CVE-2026-126360), soupsieve 3.0.3 → 4.0.1 (CVE-2026-126190, fixed in 4.0). All three are
+  transitive (email-validator, fastmcp-slim, beautifulsoup4), so only `plugin/server/uv.lock`
+  moves, and only in those three entries: the lock was written with uv 0.11.24, which keeps its
+  format (revision 3) and markers. soupsieve 4 is a major: its breaking changes concern
+  `<template>` contents and `iframe` documents, which none of the scraped pages and none of our
+  selectors rely on; every scraping test passes with it. The README now states the minimum uv
+  the plugin needs, 0.4.16 (the first with `--project`, which the launcher passes to `uv run`
+  and `uv sync`).
 - **The citation hook and the local server no longer use the opened folder's Python
   environment.** The hook and the server's launchers (the `.mcpb`, the Codex
   configuration of the OpenAI bundle, the documented examples) started `uv` from the
@@ -888,6 +1044,200 @@ described in those sections, not repeated here. Upgrading from 2.x:
   server runs without the disk cache.
 
 ### Fixed
+- **Act models and two calculators: seven findings of a drafting trial (#195).** Each norm was read on
+  the text in force on Normattiva on 2026-11-22.
+  - **Tier 3 routes named resources that do not exist.** 34 models pointed to
+    `legal://modelli-atti/{introduttivi,esecuzione,istanze,notifiche-varianti,pct,stragiudiziale}`,
+    which the server never registered («Unknown resource»). They now name
+    `legal://riferimenti/modelli-atti-catalogo`, and `genera_modello_atto` says that no per-type text
+    model exists: the act is composed from the fields, references and warnings it returns (the
+    `genera-atto` skill and the catalog say the same). `resource_modello` keeps its name. A new test
+    fails when a route names a resource, a tool or a `tool_calcolo` the server does not register.
+  - **`atto_di_precetto`.** Its first warning opened with the art. 644 c.p.c. term, which belongs to
+    the decreto ingiuntivo. The warnings now give art. 481 (inefficacy after ninety days from
+    notification, suspended by an opposition until art. 627) and the content of art. 480: the term of
+    at least ten days; under penalty of nullity, the parts and the date of notification of the title;
+    in a sentence of its own, the over-indebtedness warning, the court competent for enforcement and,
+    for a precetto the party signs personally, residence, PEC or domicilio digitale. `tool_calcolo` adds
+    `interessi_corso_causa` and `interessi_acconti`, and prices the fee with `modello_notula` on the
+    precetto's own D.M. 55/2014 table instead of the cognition phases of `parcella_avvocato_civile`.
+  - **`decreto_ingiuntivo_ordinario` and `decreto_ingiuntivo_professionale`** price the monitorio
+    with `modello_notula(tipo_procedimento='decreto_ingiuntivo')`, single phase; the
+    `decreto_ingiuntivo` and `interessi_mora` chaining hints and the `recupero-credito` skill say
+    the same, and that the fee is `totale_onorari`: `totale_notula` already holds the contributo
+    unificato and the anticipazione forfettaria.
+  - **`data_inizio` of the interest tools.** `interessi_mora` counts from the day after `data_inizio`,
+    as art. 4 co. 1 D.Lgs. 231/2002 wants («dal giorno successivo alla scadenza del termine per il
+    pagamento»), but described it as the «data di decorrenza»: models passed the first day of
+    interest and lost one day per period. The parameter is now the due date, and the models that feed
+    `interessi_mora`, the `recupero-credito` skill and the `/interessi` command say so.
+    `interessi_legali`, `interessi_acconti`, `interessi_tasso_fisso` and `interessi_corso_causa` follow
+    the same day count and now describe it the same way. **No computation changed.**
+  - **`sollecito_formale_mora`** keeps `rivalutazione_monetaria` only behind a warning: on a
+    commercial credit with D.Lgs. 231/2002 interest it is the greater damage of art. 1224 co. 2 c.c.,
+    to be claimed and proved, not due when the default-interest rate was agreed, and only for the part
+    above the default interest; the two are not added.
+  - **`verifica_mediazione_obbligatoria`.** «contratti d'opera» answered `obbligatoria: false`
+    although art. 5 co. 1 D.Lgs. 28/2010 lists «opera»: apostrophes, articles and prepositions («d'»,
+    «di», «del»…) no longer count, so «contratto d'opera» and «Contratti di opera» match
+    `contratti_opera`, and every item of art. 5 co. 1 written in the norm's own words matches,
+    including «contratti assicurativi, bancari e finanziari», which names three matters of the table
+    at once (`materia_trovata` lists them, comma-separated). **Behaviour change:** a matter the tool does not recognise answers
+    `obbligatoria: null` («non determinabile», with the list of art. 5 co. 1 to check), no longer
+    `false`, which exposed the claim to improcedibility (art. 5 co. 2). `false` stays only for
+    circolazione stradale, a known matter outside the list (negoziazione assistita instead). The 21
+    matters of the table match art. 5 co. 1 in force.
+- **`cookie-audit`: the newsletter-form probe reads the form's real address (#175).** It read
+  the form's `action` property, which a field named «action» inside the form hides (WordPress
+  forms posting to `admin-ajax.php` have one): the probe threw on any page with such a form, and
+  reported none of the page's forms. It now reads the
+  `action` attribute, resolved against the page as the browser does.
+- **`cerca_ddl` and `ddl_su_norma`: a long search no longer reads as «Senato unreachable» (#185).**
+  The dati.senato.it WAF answers 403 to any GET whose path and query string exceed 2048 bytes,
+  whatever the query says (verified live: 2048 answers, 2049 does not), and POST is refused too.
+  With words of average length, a search of thirteen terms, or six with every filter on, crossed it
+  and came back as `source_down`. The SPARQL queries now travel with their whitespace collapsed,
+  which leaves room for one or two terms more with the same results (checked live against the
+  previous queries). A search that
+  still does not fit is refused before the request, with the reason and what to shorten, and so
+  is an `iter_ddl` atto with an absurd run of suffixes («S.1-B-B-B…»). A bare
+  string passed to `search_ddl` in place of a list of term groups, which turned «codice della
+  strada» into seventeen one-letter clauses, now raises `TypeError`. New live tests run the real
+  `search_ddl` and pin the 2048-byte limit.
+- `plugin/README.md` said 23 skills in its English summary: the plugin ships 30 (and 235 tools, 9 commands, 6 agents).
+- **Act models whose warnings cost the act or the right (G-493, from the 2.17.2 hotfix).** Each was
+  reread on the text in force on Normattiva. Only these models were reread; the others are unchanged
+  (the istanza di esecutorietà model, for one, still counts «40 giorni + 10»).
+  - `opposizione_decreto_ingiuntivo` and `relata_pec_opposizione_di` gave «40 giorni dalla notifica».
+    The term is the one the decree fixes (art. 641 co. 1-2 c.p.c.): 40 days, down to 10 or up to 60
+    for giusti motivi; 50 days, down to 20, for a debtor in another EU State; 60, between 30 and
+    120, elsewhere. A late opposition is admitted only under art. 650: no timely knowledge of the
+    decree (irregular notification, caso fortuito, forza maggiore) or, after C. Cost. 120/1976,
+    knowledge of it but no way to oppose in time for caso fortuito or forza maggiore; never past ten
+    days from the first act of execution. The opposition model is now the atto introduttivo
+    (before the giudice di pace, ricorso semplificato, art. 316 co. 1; before the tribunale,
+    citazione, or ricorso in the rito semplificato, art. 281-decies co. 3), with the art. 645 co. 3
+    hearing and a field for the term in the decree. The `decreto_ingiuntivo` tool's
+    `termini.opposizione` says the same, and so do the `legal://riferimenti/termini-processuali`
+    table and the `legal://riferimenti/checklist-decreto-ingiuntivo` checklist, whose istanza di
+    esecutorietà no longer waits «40 giorni» but the term fixed in the decree.
+  - `avviso_543_5_cpc` was addressed to the debtor. It is notified to the third party, with the
+    numero di ruolo, and, notified, deposited in the file, both by the hearing date; otherwise the
+    pignoramento is inefficace (towards the third parties whose notice is not notified or
+    deposited, art. 543 co. 5 c.p.c.). Fields for the numero di ruolo and the hearing date.
+  - `vendita_immobili` asked to attach an expert valuation (art. 568) and pointed to the catasto
+    calculator. The judge sets the market value on the parties' elements and the art. 569 expert's;
+    what the creditor deposits, within the art. 497 term, is the catasto extract and the
+    twenty-year certificates, or a notarial certificate, on pain of inefficacia, with the
+    transcription cancelled and, without other goods, the process extinguished (art. 567 co. 2-3).
+    The art. 501 ten-day wait is stated too.
+  - The live test that certified «40 giorni» as correct now checks the decree's term, with rows for
+    the other models; `cite_law` names an annex as «Testo tratto da: …» (it read «dall'CODICE
+    CIVILE» for a part without «Allegato» in its name).
+- **The legge Basevi cited as a «d.lgs.» was refused.** A D.Lgs.C.P.S. is a decreto legislativo of the
+  Capo provvisorio dello Stato, and «art. 26 d.lgs. 1577/1947» is how it is cited; since its heading
+  type was measured (G-440) the page counted as another act's, and only «D.Lgs.C.P.S. 1577/1947» or
+  «legge Basevi» read it. A «d.lgs.» now also takes the heading «DECRETO LEGISLATIVO DEL CAPO
+  PROVVISORIO DELLO STATO», dated by its title like any d.lgs.; cited as a legge, or another type, it
+  is still another act. No cache holds the refusal: a date not found is never kept.
+- **Amendments whose entry into force was deferred, served as in force (#172).** Normattiva dated the
+  versions carrying art. 27 of d.lgs. 116/2017 (giudice di pace reform) by superseded dates of its
+  entry-into-force chain (31/10/2021, 2025) and served them as the text in force, `ESATTO`, although
+  the articles' own update notes defer them to 31/10/2027 (d.l. 100/2026). The notes' dated
+  entry-into-force clauses are now read (`lib/visualex/vigenza_differita.py`; the latest note of each
+  provision wins). When one falls after today, the article's table of updates decides: the latest
+  version carries only the deferred act and the acts that deferred it, so the previous version is
+  served as the text in force (case A, e.g. art. 7 c.p.c., version 01/01/2023-30/10/2025); the
+  article itself was inserted by the deferred act, so it is not in force yet (art. 15-bis c.p.c.);
+  otherwise no version is the text in force and it is said (case B, art. 543 c.p.c.). Always
+  `INDICATIVO`, with a notice naming the note and the date, and `upcoming` {amended, 2027-10-31};
+  `cite_law` JSON carries `rinvio`, and `verifica_citazioni` says it, also when the table of updates
+  could not be read (or was read only in part) to tell which text is in force. `storia_norma` and
+  `api.modifiche_articolo` name the version Normattiva wrongly gives as in force, `INDICATIVO`, from
+  the notes of the page the walk already reads (no request more). Checked live on the 20 articles of
+  the c.p.c. and c.c. that carry the note.
+- **A false deferral notice on the articles of the 2005-2006 esecuzioni reform (#177).** Since #179,
+  arts. 567 and 569 c.p.c. (and every article d.l. 35/2005 touched) came out `INDICATIVO` with «non è
+  stato possibile leggere sull'art. 2, comma 3-sexies … se quella data è stata rinviata ancora». Their
+  notes move that entry into force from 1/1/2006 to 1/3/2006, a chain read live as possibly stale.
+  The comma defers part of an article («Le disposizioni di cui ai commi 3, lettera e) …»), so it was
+  «not known» before its dates were looked at, and each reading also walked the article's versions
+  since 2005. A comma all of whose dates have passed (every date it states, with an entry-into-force
+  formula or not) and with no exception or derogation now defers nothing, whatever part it names:
+  the articles are `ESATTO` again with no notice, and no table is read. A comma with an exception
+  or derogation («salvo», «fatte salve», «ad eccezione», «ad esclusione», «eccettuati», «fuorché»,
+  «fermo restando», «in deroga», «diversamente disposto/previsto/stabilito» …) stays not known even
+  with past dates, since it may defer
+  elsewhere; so does a spent comma with a date still to come in other words («si applicano a
+  decorrere dal …»). A date to come is taken only when the comma states no other date, past or
+  future: two dates in one comma may belong to different articles.
+- **Two more provisions of art. 27 d.lgs. 116/2017 served as in force, and a case B notice that
+  said too much (#177).** A scan of all 32 provisions art. 27 amends found:
+  - art. 765 c.p.c. served `ESATTO` with «cancelliere del giudice di pace». Normattiva's notes on that
+    page stop at 31/10/2026, never updated to 2027. A chain of notes whose date was moved later and
+    has now passed is checked against the provision that sets it: art. 32, comma 3 of d.lgs.
+    116/2017, read live as in force today (the page is kept a day). Never a date written in the
+    code.
+    - One date in that comma still to come: the deferral. The chain also takes the acts of the
+      provision's latest table of updates (d.l. 100/2026).
+    - All its dates passed, or the comma repealed: nothing is deferred.
+    - The provision not readable, or its date not known: a notice without a date, `INDICATIVO`,
+      whenever a version read carries the deferred act. The date is not known when the comma has
+      no date or more than one future date, or when it may not be the date of what the chain
+      defers: an exception («salvo», «ad eccezione», «in deroga» …), only part of an article, or
+      another article than the one the notes name.
+
+    Case A now also covers the versions after the deferred one when they carry only the acts that
+    deferred it: version 4 (art. 27), then version 5 (d.l. 162/2019), so version 3 («cancelliere del
+    tribunale») is served. The deferred act in more than one version stays a case B.
+  - art. 73-bis disp. att. c.c. served as repealed, `ESATTO`. Its notes word the deferral «la proroga
+    al 31 ottobre 2027 dell'entrata in vigore della presente abrogazione», with or without «che»,
+    and that wording is now read. A repealed page goes through case A: version 2 is served with the
+    notice, `upcoming` {abrogated, 2027-10-31} and `successione` dated 2027-10-31, `INDICATIVO`.
+  - case B notice: it no longer says the text «already contains» the deferred amendments.
+    Normattiva may have rewritten them since (art. 518 and 521-bis c.p.c., d.lgs. 164/2024) or never
+    applied them (art. 17 l. 108/1996). It now says Normattiva applied later amendments on top, so
+    the text may hold them in whole or in part and is not verified as the text in force.
+
+  `storia_norma` and `api.modifiche_articolo` give the same answers. The AKN channel is unchanged
+  (#177, point 2).
+- **«c.g.c.» was refused as ambiguous.** The key «cgc» of `NOMI_AMBIGUI` caught «c.g.c.» through the
+  dotted-acronym collapse, so «art. 190 c.g.c.» (d.lgs. 174/2016) was refused by callers that ask
+  for ambiguity first. «cgc» is dropped (no second act was ever named for it) and a name the tables
+  resolve is never ambiguous.
+- **An EU consolidation CELLAR does not serve (#163).** For reg. (UE) 2022/858 (DLT) and 2025/1106
+  (SAFE), CELLAR lists a consolidation that folds a corrigendum in but answers 404 for it in every
+  language, and `cite_law` printed httpx's raw «Client error '404 '» line. A consolidation the reader
+  chose that folds corrigenda only now falls back to the Official Journal text, with a notice naming
+  the corrigendum it lacks, `INDICATIVO`, and `consolidato_non_pubblicato` in the JSON. One that
+  folds a real amendment in is refused, readably, never replaced by the OJ text (which would be a
+  text no longer in force); the OJ text stays available with `versione="originale"`. A consolidation
+  the caller named is never replaced (a readable «not published» error). Any other CELLAR failure
+  (5xx, timeout) is a readable error with the CELEX and a «retry later», also for the act's tree and
+  recitals.
+- **Another act's article under a historical heading.** Asked «art. 1 r.d.lgs. 512/1946» (or a legge,
+  r.d., r.d.l. n. 512 of 1946, with the year or the full date), Normattiva serves the page of the
+  D.Lgt. 30 marzo 1946, n. 512, and its art. 1 was served as the asked act's: «DECRETO
+  LUOGOTENENZIALE» was in no table, so the heading proved nothing. Three historical heading types,
+  measured on 1923-1950 pages (decreto luogotenenziale, decreto and decreto legislativo del Capo
+  provvisorio dello Stato), now mark such a page as another act's. The caches that may hold such a
+  page's reading are not read after the upgrade: Normattiva pages (`normattiva_pagine`, schema 6),
+  the versions of an article (`normattiva_aggiornamenti`, schema 3) and the act URL → export map
+  (`akn_url_params.json`, marker `intestazione-2`; it never expires, so an old entry would have
+  served the other act's export for ever).
+- **«Legge sulle locazioni abitative» was refused.** The table typed l. 9 dicembre 1998, n. 431 as a
+  decreto legislativo, so every lookup by name was refused as another act; it is a legge.
+- **Wrong article for a decree whose text is an annex (G-440).** «art. 1 d.lgs. 175/2024» served
+  art. 1 of the testo unico, unlabelled, under the decree's URN: when the decree's page states no
+  validity window the export answered from the annex. The decree's own article now answers when the
+  URN names it; an article only the annex has is served labelled, and an unlabelled decree page is
+  no longer taken for the annex's article. The same rule changes other decrees that approve a code
+  in an annex, cited by the decree's number: d.lgs. 104/2010 artt. 1-2 (art. 1 was the c.p.a.'s,
+  labelled), d.lgs. 174/2016 artt. 1-2, d.lgs. 79/2011 art. 1 (on both channels: the HTML page is
+  dropped and the export answers) and artt. 2-4 on the AKN channel, and r.d. 262/1942 artt. 1-2,
+  which served the codice civile's artt. 1-2 unlabelled (a wrong article, now fixed); the codes
+  cited by name are unchanged. The citation gate now keeps an annex in an act's identity, so «art. 1
+  disp. att. c.p.a.» is no longer the c.p.a.'s art. 1.
 - **The replay recorder keeps the live client's session** (`scripts/replay_mcp_outputs.py`).
   It dropped `Set-Cookie` from the response handed to the client, not only from the tape, so
   Normattiva answered the per-version update tables with its session page and `storia_norma`
@@ -921,8 +1271,10 @@ described in those sections, not repeated here. Upgrading from 2.x:
   term comes before enforcement starts, while the terms of enforcement already under
   way are suspended (Cass. 18652/2013, on art. 497). It warns that an early seizure
   would be void and open to an art. 617 opposition. When the last day of the ban is a
-  holiday, `data_prudente` gives the day after the deadline extended under art. 155
-  co. 4, with the same warning (G-414). The new optional
+  holiday or a Saturday, `data_prudente` gives the day after the deadline extended
+  under art. 155 in full, co. 4 (holidays) and co. 5 (Saturday), with the same warning
+  (G-414, LI-073). Examples: notice on 16/12/2025 gives the 30th; on 4/3/2026, the
+  17th. The new optional
   `termine_precetto_giorni` takes the term stated in the precetto when longer, and
   the answer recalls the immediate enforcement the court may authorise when delay is
   dangerous (`esecuzione_immediata`). When the precetto's term outlasts the 90 days of

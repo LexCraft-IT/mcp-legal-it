@@ -130,13 +130,19 @@ JSON-ready data:
   the in-memory caches are shared by the process, so a per-request directory
   would split only the disk part.
 - **`cache=False`** turns the disk caches off, as `LEGAL_CACHE=off` does.
-- **`brocardi=False`** sends no request to brocardi.it, as `LEGAL_BROCARDI=off`
-  does.
+- **`brocardi`**: Brocardi.it is off by default (decision LI-079), so
+  `annotazioni_brocardi` answers `brocardi_disattivato` and no request reaches
+  brocardi.it unless `LEGAL_BROCARDI=on` is set or the caller passes
+  **`brocardi=True`** (`configura(brocardi=True)` for the process,
+  `configurazione(brocardi=True)` for a block). **`brocardi=False`** keeps it off
+  even where the environment says `on`.
 
 **An *off* wins.**
 
 - `cache=True` cannot override `LEGAL_CACHE=off`.
-- `brocardi=True` raises `ValueError` under `LEGAL_BROCARDI=off`. Inside
+- `brocardi=True` raises `ValueError` under `LEGAL_BROCARDI=off`, and under a
+  value of `LEGAL_BROCARDI` it does not recognise (accepted: `on`, `1`, `true`,
+  `yes`; `off`, `0`, `false`, `no`; anything else counts as off). Inside
   `configurazione` it also raises inside a context where Brocardi was switched
   off (`crea_server(brocardi=False)`, an enclosing `configurazione(brocardi=False)`).
 - A field a block does not pass is inherited and never overrides the switch of
@@ -220,6 +226,11 @@ Reads a citation (`"art. 2043 c.c."`, `"art. 6 GDPR"`, `"art. 2-bis D.Lgs. 196/2
 - **Resolution:** the same resolver as `cite_law`, hand-verified tables first
   (CLAUDE.md, "Risoluzione degli estremi normativi"). It never guesses: an
   unknown name is `atto_non_riconosciuto`, with the closest names in `errore`.
+  A regional law is `atto_non_riconosciuto`, «fonte non coperta» (LI-086).
+- **`avvisi`:** a sigla that follows the date (TUIR, TUR, TUIVA, TUGT …, LI-086)
+  names today's act and says when that changes («dal 1° gennaio 2027 si applica
+  il d.lgs. …»). `indice_atto`, `testo_atto` and `testo_articolo` put the same
+  notice first in their `avvisi`.
 
 ```python
 r = api.leggi_riferimento("art. 2043 c.c.")
@@ -379,12 +390,14 @@ that page is Normattiva's error page (below; the check is shared per event loop)
   - **ESATTO:** for the types in `TIPI_ATTO_VERIFICATI`, the date is read from the
     page's title. It is accepted only when the title names this act's type, year and
     number, because Normattiva's resolver does not check what it is asked and a page of
-    another act gives no date. The seven types are `legge`, `decreto legislativo`,
+    another act gives no date. The eight types are `legge`, `decreto legislativo`,
     `decreto legge`, `decreto del presidente della repubblica`, `regio decreto`,
-    `regio decreto legge` and `legge costituzionale`, named as `normalize_act_type`
+    `regio decreto legge`, `regio decreto legislativo` and `legge costituzionale`, named
+    as `normalize_act_type`
     names them, so `"d.lgs."` and `"d.P.R."` count.
   - **INDICATIVO:** for the other types it accepts (DPCM, `decreto ministeriale`, d.lgs.
-    luogotenenziale), the page's heading must name the asked type, year and number, read
+    luogotenenziale, and the acts of 1944-1948: `decreto luogotenenziale`, `decreto del capo
+    provvisorio dello stato`, `decreto legislativo del capo provvisorio dello stato`), the page's heading must name the asked type, year and number, read
     through a table of headings measured on real pages («DECRETO» for a D.M.); the date is
     the heading's day, and an ELI date that disagrees with it makes the answer transient.
     Normattiva's resolver does not check the type: asked a DPCM n. 158 of 2014 by its
@@ -1078,8 +1091,9 @@ Brocardi notes on an article: ratio, explanation, brocardi, case-law abstracts.
 
 - This is **third-party editorial content, never the norm**. Whether to show it
   is the consumer's call.
-- The Brocardi switch is honoured. When it is off, the answer is
-  `brocardi_disattivato` and no request is made.
+- The Brocardi switch is honoured, and Brocardi is off by default. When it is
+  off, the answer is `brocardi_disattivato` and no request is made; switch it on
+  with `LEGAL_BROCARDI=on` or `configurazione(brocardi=True)`.
 - **Esiti:** `trovato`, `brocardi_disattivato`, `riferimento_non_valido` (also
   when no article is given), `atto_non_riconosciuto`, `non_supportata`
   (annexes), `errore_fonte`, `testo_assente`.
@@ -1090,7 +1104,9 @@ The act names the resolver knows, in VisuaLex's `/fetch_alias_catalog` shape.
 No network.
 
 - `presets`: the hand-verified short names (`gdpr`, `ai act`, `tub` …) mapped to
-  `{act_type, act_number?, date?}`.
+  `{act_type, act_number?, date?, allegato?}`. `allegato` is the annex holding the
+  act's text (a testo unico approved as the annex of its decree). A sigla that
+  follows the date (TUIR …, LI-086) is given with today's act.
 - `known_acts`: every name `leggi_riferimento` recognises, sorted.
 
 ### Constants
@@ -1103,7 +1119,8 @@ No network.
 - **`TIPI_ATTO_VERIFICATI`**: the act types whose date and number `risolvi_atto`
   reads from the Normattiva page's title (`ESATTO`), as `normalize_act_type` names
   them: `legge`, `decreto legislativo`, `decreto legge`, `decreto del presidente
-  della repubblica`, `regio decreto`, `regio decreto legge`, `legge costituzionale`.
+  della repubblica`, `regio decreto`, `regio decreto legge`, `regio decreto
+  legislativo`, `legge costituzionale`.
 - **`ARTICLE_SUFFIX_ALTERNATION`**: VisuaLex's regex alternation of all those
   spellings plus `semel` ("vicies semel", 21st), longest first. Close the group
   with `\b`, or a suffix matches the head of an ordinary word ("art. 5 bisogna"):
@@ -1301,7 +1318,7 @@ All results are frozen dataclasses (`mcp_legal_it/api/tipi.py`).
 | Type | Fields |
 |---|---|
 | `NormaDati` | `tipo_atto, data, numero_atto, url, allegato, numero_articolo, versione, data_versione, urn`, plus `descrizione, data_risolta`, and VisuaLex's `celex_consolidated` last |
-| `EsitoRiferimento` | `esito, norma_data: tuple[NormaDati, ...], errore` |
+| `EsitoRiferimento` | `esito, norma_data: tuple[NormaDati, ...], errore, avvisi` |
 | `AttoRisolto` | `esito, tipo_atto, numero_atto, data, urn, url, precisione, errore, fonti` |
 | `ModificheArticolo` | `esito, norma_data, versioni, modifiche, url, completa, precisione, avvisi, versioni_non_lette, errore, fonti` |
 | `VersioneArticolo` | VisuaLex `validity` keys: `version_number, valid_from, valid_to` |
@@ -1312,7 +1329,7 @@ All results are frozen dataclasses (`mcp_legal_it/api/tipi.py`).
 | `NotaRedazionale` | `intestazione, testo, ordine`: one «Note all'art. N» section of the Gazzetta's editorial notes (§3, `testo_articolo`) |
 | `ParteArticolo` | `progressivo, commi_dal, commi_al, url`: one part of an article Normattiva splits (§3, `parte_articolo`) |
 | `Vigenza` | VisuaLex `validity`: `state, valid_from, valid_to, version_number, act_updated, request_in_window` |
-| `IndiceAtto` | `esito, title, rubriche, abrogati, parts, count`, plus `voci, codice_redazionale, data_gu, url, errore, fonti, consolidato, consolidato_verificato` |
+| `IndiceAtto` | `esito, title, rubriche, abrogati, parts, count`, plus `voci, codice_redazionale, data_gu, url, errore, fonti, consolidato, consolidato_verificato, avvisi` |
 | `AlberoAtto` | VisuaLex `/fetch_tree`: `esito, articles, count, metadata`, plus `url, errore, fonti, consolidato, consolidato_verificato` |
 | `ConsiderandiAtto` | VisuaLex `/fetch_recitals`: `esito, considerando` (`{number, text}`), plus `url, errore, fonti` |
 | `TestoAtto` | `esito, testo, titolo, url, errore, fonti, completo, avvisi` |

@@ -1,6 +1,10 @@
 """Resolution maps for Italian legal acts — URN generation, abbreviations, Brocardi URLs."""
 
 import re
+from datetime import date, datetime
+from typing import NamedTuple
+
+from .. import _clock
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +157,9 @@ def articolato_in_allegato(act_urn: str, date: str, numero: str) -> "str | None"
 # ATTI NOTI — common names → scraper parameters
 # ---------------------------------------------------------------------------
 
+#: The one act read from the Consiglio nazionale forense's site (lib/cnf), not from Normattiva.
+CODICE_DEONTOLOGICO_FORENSE = "codice deontologico forense"
+
 ATTI_NOTI = {
     "gdpr": {"tipo_atto": "regolamento ue", "data": "2016", "numero_atto": "679"},
     "rgpd": {"tipo_atto": "regolamento ue", "data": "2016", "numero_atto": "679"},
@@ -185,9 +192,7 @@ ATTI_NOTI = {
     "cdc": {"tipo_atto": "codice del consumo", "data": "", "numero_atto": ""},
     "tub": {"tipo_atto": "decreto legislativo", "data": "1993-09-01", "numero_atto": "385"},
     "tuf": {"tipo_atto": "decreto legislativo", "data": "1998-02-24", "numero_atto": "58"},
-    "tuir": {"tipo_atto": "decreto del presidente della repubblica", "data": "1986-12-22", "numero_atto": "917"},
-    "testo unico delle imposte sui redditi": {"tipo_atto": "decreto del presidente della repubblica", "data": "1986-12-22", "numero_atto": "917"},
-    "testo unico imposte sui redditi": {"tipo_atto": "decreto del presidente della repubblica", "data": "1986-12-22", "numero_atto": "917"},
+    # «TUIR» and its long names follow the date: SIGLE_DATATE (LI-086).
     # EU treaties — Norma.url() routes these to the fixed CELEX pages in EURLEX
     "tue": {"tipo_atto": "TUE", "data": "", "numero_atto": ""},
     "trattato sull'unione europea": {"tipo_atto": "TUE", "data": "", "numero_atto": ""},
@@ -209,6 +214,26 @@ ATTI_NOTI = {
     "cyber resilience act": {"tipo_atto": "regolamento ue", "data": "2024", "numero_atto": "2847"},
     "cra": {"tipo_atto": "regolamento ue", "data": "2024", "numero_atto": "2847"},
     "mica": {"tipo_atto": "regolamento ue", "data": "2023", "numero_atto": "1114"},
+    # Financial-market regulations by the names an external citation corpus gives them (G-440). CELLAR titles
+    # checked 11 November 2026. «Prospetto», «DLT» and «SAFE» are keyed only after «regolamento»:
+    # alone they are a common noun, an acronym of a technology and an English word. «MAR» is keyed
+    # bare but never read from a date's «mar.» (see SIGLE_COME_MESI).
+    "mar": {"tipo_atto": "regolamento ue", "data": "2014", "numero_atto": "596"},
+    "market abuse regulation": {"tipo_atto": "regolamento ue", "data": "2014", "numero_atto": "596"},
+    "regolamento sugli abusi di mercato": {"tipo_atto": "regolamento ue", "data": "2014", "numero_atto": "596"},
+    "regolamento europeo sugli abusi di mercato": {"tipo_atto": "regolamento ue", "data": "2014", "numero_atto": "596"},
+    "micar": {"tipo_atto": "regolamento ue", "data": "2023", "numero_atto": "1114"},
+    "mifir": {"tipo_atto": "regolamento ue", "data": "2014", "numero_atto": "600"},
+    "regolamento prospetto": {"tipo_atto": "regolamento ue", "data": "2017", "numero_atto": "1129"},
+    "regolamento dlt": {"tipo_atto": "regolamento ue", "data": "2022", "numero_atto": "858"},
+    "regolamento pilota dlt": {"tipo_atto": "regolamento ue", "data": "2022", "numero_atto": "858"},
+    "csdr": {"tipo_atto": "regolamento ue", "data": "2014", "numero_atto": "909"},
+    # SAFE: reg. (UE) 2025/1106 of the Council (Security Action for Europe), so named by the
+    # decisions of an external citation corpus (confirmed against the corpus documents, 11 November 2026).
+    "regolamento safe": {"tipo_atto": "regolamento ue", "data": "2025", "numero_atto": "1106"},
+    "regolamento sull'ia": {"tipo_atto": "regolamento ue", "data": "2024", "numero_atto": "1689"},
+    "regolamento sull'intelligenza artificiale": {"tipo_atto": "regolamento ue", "data": "2024", "numero_atto": "1689"},
+    "regolamento europeo sull'intelligenza artificiale": {"tipo_atto": "regolamento ue", "data": "2024", "numero_atto": "1689"},
     "machinery regulation": {"tipo_atto": "regolamento ue", "data": "2023", "numero_atto": "1230"},
     "direttiva whistleblowing": {"tipo_atto": "direttiva ue", "data": "2019", "numero_atto": "1937"},
     "whistleblowing": {"tipo_atto": "direttiva ue", "data": "2019", "numero_atto": "1937"},
@@ -220,7 +245,526 @@ ATTI_NOTI = {
     "european accessibility act": {"tipo_atto": "direttiva ue", "data": "2019", "numero_atto": "882"},
     "eprivacy": {"tipo_atto": "direttiva ue", "data": "2002", "numero_atto": "58"},
     "direttiva eprivacy": {"tipo_atto": "direttiva ue", "data": "2002", "numero_atto": "58"},
+    # Consumer Credit Directive 2: dir. (UE) 2023/2225 of 18 October 2023 (CELLAR title, checked
+    # 9 November 2026). «Direttiva credito ai consumatori» is deliberately absent: it also names
+    # dir. 2008/48/CE, which 2023/2225 repeals only from 20 November 2026 (G-440).
+    "ccd2": {"tipo_atto": "direttiva ue", "data": "2023", "numero_atto": "2225"},
+    "ccd 2": {"tipo_atto": "direttiva ue", "data": "2023", "numero_atto": "2225"},
+    "ccd ii": {"tipo_atto": "direttiva ue", "data": "2023", "numero_atto": "2225"},
+    "direttiva ccd2": {"tipo_atto": "direttiva ue", "data": "2023", "numero_atto": "2225"},
+    "direttiva ccd 2": {"tipo_atto": "direttiva ue", "data": "2023", "numero_atto": "2225"},
+    # The testo unico della giustizia tributaria («TUGT») is in SIGLE_DATATE: it applies from a
+    # later date than it entered into force, and says so (LI-086).
+    # The codice deontologico forense: a CNF act, not on Normattiva. Norma routes it to the
+    # PDF the CNF publishes (lib/cnf). «CDF» is deliberately absent: it is also read as the
+    # Carta dei diritti fondamentali, and «art. 47 CDF» served from the code would be the
+    # wrong article; unresolved, it is suggested instead (and the citation gate asks for it).
+    CODICE_DEONTOLOGICO_FORENSE: {"tipo_atto": CODICE_DEONTOLOGICO_FORENSE, "data": "", "numero_atto": ""},
+    "nuovo codice deontologico forense": {"tipo_atto": CODICE_DEONTOLOGICO_FORENSE, "data": "", "numero_atto": ""},
+    "codice deontologico degli avvocati": {"tipo_atto": CODICE_DEONTOLOGICO_FORENSE, "data": "", "numero_atto": ""},
+    "ncdf": {"tipo_atto": CODICE_DEONTOLOGICO_FORENSE, "data": "", "numero_atto": ""},
 }
+
+
+# ---------------------------------------------------------------------------
+# FONTI NON COPERTE — law the resolver knows by name and no tool reads
+# ---------------------------------------------------------------------------
+
+_NORME_INTEGRATIVE_CORTE_COST = (
+    "le «Norme integrative per i giudizi davanti alla Corte costituzionale» sono una deliberazione "
+    "della Corte costituzionale (delibera 22 luglio 2021, GU n. 262 del 3 novembre 2021, poi "
+    "modificata con delibere pubblicate anch'esse in Gazzetta Ufficiale), non un atto legislativo: "
+    "Normattiva non le pubblica, quindi il loro testo non è disponibile qui. Testo come pubblicato: "
+    "Gazzetta Ufficiale, codice redazionale 21A06516 (senza le modifiche successive)."
+)
+
+#: A source a citation may name that no tool reads, by name, with what cite_law answers:
+#: what the source is and where its official text is, never a nearby act (no suggestions).
+#: Every key names the source unambiguously: a bare «norme integrative» (a CCNL's, a
+#: regolamento's) is not keyed, and stays an ordinary unresolved name.
+#: Facts checked 9 November 2026 (G-440): Normattiva's search and URNs have no deliberation
+#: of the Court; the Gazzetta Ufficiale lists the 2021 text and its later amendments.
+_CONSOB = (
+    "il {nome} è un regolamento della Consob ({estremi}), non un atto legislativo: Normattiva ed "
+    "EUR-Lex non lo pubblicano, quindi il suo testo non è disponibile qui. Il testo vigente è sul "
+    "sito della Consob (Regolamentazione); la delibera di adozione si legge con gli strumenti "
+    "CONSOB per numero."
+)
+
+_CEDU_TESTO = (
+    "il testo vigente non è disponibile qui: quello allegato alla legge di esecuzione su Normattiva "
+    "è il testo originario, e i Protocolli successivi hanno modificato e rinumerato parte della "
+    "Convenzione, quindi servirlo come vigente rischierebbe l'articolo sbagliato. Testo ufficiale: "
+    "Consiglio d'Europa."
+)
+
+_TRATTATO = (
+    "{nome} è un trattato internazionale ({estremi}): cite_law legge le fonti italiane ed europee, "
+    "non i trattati, quindi il suo testo non è disponibile qui."
+)
+
+
+def _fonti(messaggio: str, *nomi: str) -> dict[str, str]:
+    return {nome: messaggio for nome in nomi}
+
+
+#: Facts of the entries below, checked 11 November 2026 (G-440): Consob's numbers on consob.it
+#: (delibere 11971, 17221, 20249); the laws of ratification on Normattiva (their titles).
+#: Bare sigle that name something else too («CSE», «Convenzione di Ginevra») are not keyed.
+FONTI_NON_COPERTE: dict[str, str] = {
+    **_fonti(_CONSOB.format(nome="Regolamento Emittenti",
+                            estremi="delibera 14 maggio 1999, n. 11971, attuativa del d.lgs. 58/1998"),
+             "regolamento emittenti", "regolamento emittenti consob", "regolamento consob emittenti",
+             "reg. emittenti", "reg. consob 11971/1999", "delibera consob n. 11971/1999",
+             "regolamento consob n. 11971/1999", "regolamento consob 11971/1999"),
+    **_fonti(_CONSOB.format(nome="Regolamento OPC (operazioni con parti correlate)",
+                            estremi="delibera n. 17221"),
+             "regolamento opc", "regolamento opc consob", "regolamento consob opc",
+             "regolamento operazioni con parti correlate", "regolamento parti correlate"),
+    **_fonti(_CONSOB.format(nome="Regolamento Mercati", estremi="delibera n. 20249, attuativa del d.lgs. 58/1998"),
+             "regolamento mercati", "regolamento mercati consob", "regolamento consob mercati"),
+    **_fonti("la CEDU è la Convenzione per la salvaguardia dei diritti dell'uomo e delle libertà "
+             "fondamentali (Roma, 4 novembre 1950), resa esecutiva in Italia con la legge 4 agosto 1955, "
+             "n. 848: " + _CEDU_TESTO,
+             "cedu", "convenzione europea dei diritti dell'uomo",
+             "convenzione europea per la salvaguardia dei diritti dell'uomo",
+             "convenzione europea per la salvaguardia dei diritti dell'uomo e delle libertà fondamentali",
+             "convenzione per la salvaguardia dei diritti dell'uomo e delle libertà fondamentali",
+             "convenzione edu"),
+    **_fonti("il Protocollo addizionale (n. 1) alla CEDU (Parigi, 20 marzo 1952) è reso esecutivo con "
+             "la legge 4 agosto 1955, n. 848, insieme alla Convenzione: " + _CEDU_TESTO,
+             "prot. addiz. cedu", "protocollo addizionale alla cedu", "primo protocollo addizionale alla cedu",
+             "protocollo addizionale alla convenzione europea dei diritti dell'uomo",
+             "primo protocollo addizionale alla convenzione europea dei diritti dell'uomo",
+             "protocollo n. 1 cedu", "prot. n. 1 cedu", "protocollo 1 cedu", "prot. 1 cedu"),
+    **_fonti("il Protocollo n. 4 alla CEDU (Strasburgo, 16 settembre 1963) è reso esecutivo con il "
+             "d.P.R. 14 aprile 1982, n. 217: " + _CEDU_TESTO,
+             "protocollo n. 4 cedu", "prot. n. 4 cedu", "protocollo 4 cedu", "prot. 4 cedu"),
+    **_fonti("il Protocollo n. 7 alla CEDU (Strasburgo, 22 novembre 1984) è ratificato con la legge "
+             "9 aprile 1990, n. 98: " + _CEDU_TESTO,
+             "protocollo n. 7 cedu", "prot. n. 7 cedu", "protocollo 7 cedu", "prot. 7 cedu"),
+    **_fonti(_TRATTATO.format(nome="la Carta sociale europea (riveduta)",
+                              estremi="Strasburgo, 3 maggio 1996, ratificata con la legge 9 febbraio 1999, n. 30"),
+             "carta sociale europea", "carta sociale europea riveduta"),
+    **_fonti(_TRATTATO.format(nome="la Convenzione di Aarhus",
+                              estremi="Aarhus, 25 giugno 1998, ratificata con la legge 16 marzo 2001, n. 108"),
+             "convenzione di aarhus"),
+    **_fonti(_TRATTATO.format(nome="il Patto internazionale sui diritti civili e politici",
+                              estremi="New York, 19 dicembre 1966, ratificato con la legge 25 ottobre 1977, n. 881"),
+             "patto internazionale sui diritti civili e politici",
+             "patto internazionale relativo ai diritti civili e politici"),
+    **_fonti(_TRATTATO.format(nome="la Convenzione sui diritti del fanciullo",
+                              estremi="New York, 20 novembre 1989, ratificata con la legge 27 maggio 1991, n. 176"),
+             "convenzione sui diritti del fanciullo", "convenzione onu sui diritti del fanciullo"),
+    **_fonti(_TRATTATO.format(nome="la CEDAW (Convenzione sull'eliminazione di ogni forma di discriminazione "
+                                   "nei confronti della donna)",
+                              estremi="New York, 18 dicembre 1979, ratificata con la legge 14 marzo 1985, n. 132"),
+             "cedaw"),
+    **_fonti(_TRATTATO.format(nome="la Convenzione MARPOL 73/78",
+                              estremi="Londra, 2 novembre 1973, ratificata con la legge 29 settembre 1980, n. 662; "
+                                      "Protocollo del 17 febbraio 1978, legge 4 giugno 1982, n. 438"),
+             "convenzione marpol 73/78", "convenzione marpol", "marpol 73/78", "marpol"),
+}
+FONTI_NON_COPERTE.update({
+    nome: _NORME_INTEGRATIVE_CORTE_COST
+    for nome in (
+        "norme integrative per i giudizi davanti alla corte costituzionale",
+        "norme integrative per i giudizi dinanzi alla corte costituzionale",
+        "norme integrative per i giudizi innanzi alla corte costituzionale",
+        "norme integrative della corte costituzionale",
+        "norme integrative corte costituzionale",
+        "norme integrative corte cost.",
+        # «N.I.», the sigla the Court's own decisions use, only together with the Court.
+        "n.i. corte cost.",
+        "n.i. corte cost",
+        "n.i. corte costituzionale",
+        "n.i. della corte costituzionale",
+    )
+})
+
+
+#: Names that more than one act answers, refused on purpose (G-440): resolving them would pick
+#: one act for the reader. The value names the acts where they are known, checked 11 November
+#: 2026. The fiscal testi unici that replace an older act in time are not here: they follow
+#: the date (SIGLE_DATATE, LI-086).
+NOMI_AMBIGUI: dict[str, str] = {
+    "tus": "testo unico sicurezza, stupefacenti, successioni…",
+    # Two acts at the same date (LI-086): the codice dell'ambiente («testo unico ambientale») and
+    # the testo unico accise, «TUA» in the Agenzia delle dogane's practice (circolare 13/2025,
+    # «art. 29 del TUA»). No new testo unico accise replaces d.lgs. 504/1995 (checked 18 November
+    # 2026), so the date cannot split them.
+    "tua": "d.lgs. 3 aprile 2006, n. 152, codice dell'ambiente, o d.lgs. 26 ottobre 1995, n. 504, "
+           "testo unico accise",
+    # Three codes over time, each titled «codice dei contratti pubblici» (checked on Normattiva).
+    # With an explicit date the resolver picks the one in force (SIGLE_DATATE_CON_DATA).
+    "cod. app.": "d.lgs. 12 aprile 2006, n. 163, 18 aprile 2016, n. 50, o 31 marzo 2023, n. 36",
+    # The short name is TUSMA's (d.lgs. 208/2021, art. 1) and the start of the title the
+    # d.lgs. 177/2005 had from 2010, «testo unico dei servizi di media audiovisivi e radiofonici».
+    "testo unico dei servizi di media audiovisivi": "d.lgs. 8 novembre 2021, n. 208, o d.lgs. 31 luglio 2005, n. 177",
+    "testo unico servizi media audiovisivi": "d.lgs. 8 novembre 2021, n. 208, o d.lgs. 31 luglio 2005, n. 177",
+    **dict.fromkeys((
+        "tu rinnovabili", "testo unico rinnovabili", "tufer", "decreto fer", "decreto cer",
+        "decreto trasparenza", "decreto semplificazioni", "riforma cartabia",
+        "s.l.", "sl", "tui", "l.p.a.", "lpa",
+    ), ""),
+}
+
+
+def nome_ambiguo(name: str, *, data: "date | str | None" = None) -> "str | None":
+    """What cite_law answers for a name more than one act answers (``NOMI_AMBIGUI``), else None.
+
+    A name the tables resolve is never ambiguous: the key «cgc» once caught «c.g.c.» (the
+    codice di giustizia contabile) through the dotted-acronym collapse of ``_candidate_keys``.
+    *data* is the reference date ``resolve_atto`` takes: «cod. app.» with a date is one code.
+    """
+    if resolve_atto(name, data=data):
+        return None
+    for key in _candidate_keys(name):
+        if key in NOMI_AMBIGUI:
+            quali = NOMI_AMBIGUI[key]
+            return (f"«{name.strip()}» può indicare atti diversi" + (f" ({quali})" if quali else "")
+                    + ": cita l'atto per tipo, data e numero (es. «d.lgs. n/aaaa»)")
+    return None
+
+
+def fonte_non_coperta(name: str) -> "str | None":
+    """What cite_law answers for a source no tool reads (``FONTI_NON_COPERTE``, a regional or
+    provincial law), else None."""
+    if locale := fonte_locale(name):
+        return locale
+    for key in _candidate_keys(name):
+        if key in FONTI_NON_COPERTE:
+            return FONTI_NON_COPERTE[key]
+    return None
+
+
+# ---------------------------------------------------------------------------
+# LEGGI REGIONALI — not covered (LI-086), never read as a State law
+# ---------------------------------------------------------------------------
+#
+# No tool reads a regional law. Normattiva's resolver answers a regional URN with the page of
+# the State's act of the same year and number (see act_dates.py), so «l.r. 65/2014» served
+# through Normattiva would be the legge 65/2014 of the State, in silence: the worst answer.
+# A regional citation is refused as a source not covered, before any table or pattern, and no
+# URN is built for it (Norma.url). Real coverage is the regions branch's (LI-076), not this.
+
+#: What cite_law answers for a regional law (one sentence, no promise of coverage).
+LEGGI_REGIONALI_NON_COPERTE = (
+    "le leggi regionali non sono coperte dai tool di questo server: verifica il testo sul "
+    "Bollettino ufficiale o sulla banca dati della Regione"
+)
+
+_MESI_ESTESI = ("gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|"
+                "novembre|dicembre")
+#: The twenty regions as a citation names them («l.r. Toscana», «legge della Regione Siciliana»).
+_REGIONI = (r"abruzzo|basilicata|calabria|campania|emilia[\s-]?romagna|friuli[\s-]?venezia[\s-]?giulia|"
+            r"lazio|liguria|lombardia|marche|molise|piemonte|puglia|sardegna|sicilia(?:na)?|toscana|"
+            r"trentino[\s\-–—/]*alto[\s\-–—/]*adige(?:\s?/\s?s(?:[üu]|ue)dtirol)?|umbria|valle\s+d['’]\s?aosta|veneto")
+#: «l.r.», «L.R.», «l. r.», «LR», «L.R.T.»; «l. reg.», «legge reg.», «legge regionale».
+_SIGLA_REGIONALE = r"(?:l\.?\s?r\.?(?:\s?t\.)?|l\.\s?reg\.|legge\s+reg(?:ionale\b|\.))"
+#: An act's number and date as a citation writes them: «10 novembre 2014, n. 65», «n. 3/2015»,
+#: «65/2014», «n. 65 del 10 novembre 2014», «n. 3 del 2015». One separator class per gap
+#: (``[\s,]*``): «\s*,?\s*» splits a run of spaces two ways, and the gate reads long prose.
+_ESTREMI = (rf"(?:\d{{1,2}}(?:\s?[°º])?\s+(?:{_MESI_ESTESI})\s+\d{{4}}[\s,]*n\.?\s*\d+"
+            r"|(?:n\.?\s*)?\d+\s*/\s*\d{2,4}\b"
+            rf"|(?:n\.?\s*)?\d+\s+del\s+\d{{1,2}}(?:\s?[°º])?\s+(?:{_MESI_ESTESI})\s+\d{{4}}"
+            r"|(?:n\.?\s*)?\d+\s+del\s+\d{4}\b)")
+#: What may sit between an act's extremes and its Region or province: blanks, commas, a bracket,
+#: a slash or a dash («L. 13/1997 – Trento», «L. 65/2014/Toscana», «legge 65/2014 [Toscana]»).
+#: One class, so a run of separators is read one way only.
+_SEP_LOCALE = r"[\s,(\[/–—-]*"
+#: The preposition before a Region or province: «della», «dalla», «del», «di», «dell'».
+_DI = r"(?:(?:della|dalla|del|di)\s+|dell['’]\s?)"
+#: «Regione Toscana», «Regione autonoma della Sardegna», «Reg. Toscana», «R. Toscana», «della
+#: Toscana», «dell'Emilia-Romagna», «(Toscana)».
+_REGIONE = (rf"{_DI}?(?:(?:regione|reg\.|r\.)\s*(?:autonoma\s+)?(?:(?:della|del|dell['’])\s*)?)?"
+            rf"(?:{_REGIONI})\b")
+#: «legge» as the State patterns read it (core.riferimenti._TIPO_ALT): «legge», «L.», «L», «l.».
+#: Any spelling of «legge» they take must be read here too, or «L. 65/2014 della Regione Toscana»
+#: falls to the State's legge 65/2014.
+_LEGGE = r"(?:legge|l\b\.?)"
+#: A name that starts as a regional law does: a sigla, «legge (della) Regione …», or a State-like
+#: «legge 10 novembre 2014, n. 65 della Regione …», «L. 65/2014 (Toscana)», «legge 65/2014 Reg.
+#: Toscana» (the forms that would fall to the State's act of that number).
+_NOME_REGIONALE = re.compile(
+    rf"^(?:{_SIGLA_REGIONALE}(?![a-zà-ù])|{_LEGGE}\s*(?:della\s+)?(?:regione|reg\.)(?![a-zà-ù])"
+    rf"|{_LEGGE}\s*{_ESTREMI}{_SEP_LOCALE}(?:{_DI}?(?:regione|reg\.)(?![a-zà-ù])|{_REGIONE}|regionale\b))",
+    re.IGNORECASE,
+)
+#: A regional law cited in prose: a sigla or «legge della Regione X» with the act's extremes (after
+#: a sigla, «n. 3» alone too), or the extremes followed by the Region. A number is required: «la
+#: legge regionale» alone is not a citation.
+LEGGE_REGIONALE_NEL_TESTO = re.compile(
+    rf"\b(?:{_SIGLA_REGIONALE}(?![a-zà-ù])[\s,]*(?:{_REGIONE}[\s,]*)?(?:{_ESTREMI}|n\.\s*\d+\b)"
+    rf"|{_LEGGE}\s*(?:della\s+)?(?:regione|reg\.)\s*(?:autonoma\s+)?(?:(?:della|del|dell['’])\s*)?"
+    rf"(?:{_REGIONI})\b[\s,]*{_ESTREMI}"
+    rf"|{_LEGGE}\s*{_ESTREMI}{_SEP_LOCALE}(?:{_REGIONE}|regionale\b))",
+    re.IGNORECASE,
+)
+
+
+def legge_regionale(name: str) -> bool:
+    """Whether an act name is a regional law's («l.r. Toscana 65/2014», «legge regionale 12 marzo
+    2015, n. 3», «L.R. n. 3/2015», «legge 10 novembre 2014, n. 65 della Regione Toscana»)."""
+    return bool(_NOME_REGIONALE.match(_strip_leading_words(_normalize_key(name or ""))))
+
+
+# ---------------------------------------------------------------------------
+# LEGGI PROVINCIALI — the autonomous provinces of Trento and Bolzano, as the regional laws
+# ---------------------------------------------------------------------------
+#
+# The laws of the Province autonome di Trento e di Bolzano have the regional laws' place: no
+# tool reads them, and «legge 13/1997 della Provincia autonoma di Trento» read through the State
+# patterns would be the State's legge 13/1997. The same guard: «fonte non coperta», never
+# resolved, no Normattiva address, a warning in the citation gate.
+
+#: What cite_law answers for a provincial law (one sentence, no promise of coverage).
+LEGGI_PROVINCIALI_NON_COPERTE = (
+    "le leggi provinciali delle Province autonome di Trento e di Bolzano non sono coperte dai tool di "
+    "questo server: verifica il testo sul Bollettino ufficiale della Regione Trentino-Alto Adige/Südtirol "
+    "o sulla banca dati della Provincia"
+)
+
+#: The two autonomous provinces as a citation names them («Trento», «Bolzano/Alto Adige», «Bozen»,
+#: «del Trentino», «provincia trentina»). «Trentino-Alto Adige» is the Region, never a province.
+_PROVINCE = (r"(?:trento|trentin[oa](?![\s\-–—/]*alto)|bolzano(?:\s?/\s?alto\s+adige)?"
+             r"|alto\s+adige(?:\s?/\s?s(?:[üu]|ue)dtirol)?|altoatesin[oa]|s(?:[üu]|ue)dtirol|bozen)")
+#: «l.p.», «L.P.», «l. p.», «LP»; «l. prov.», «legge prov.», «legge provinciale». Never «l.p.a.»,
+#: «lpa» or «l. proc. amm.» (keys of the tables): neither a letter nor another dot right after
+#: the sigla, so «l.p.a.» cannot match as «l.p» either.
+_SIGLA_PROVINCIALE = r"(?:l\.?\s?p\.?(?![a-zà-ù.])|l\.\s?prov\.|legge\s+prov(?:inciale\b|\.))"
+#: «Provincia autonoma di Trento», «Prov. Trento», «P.A. Bolzano», «PAT», «PAB», «(Trento)»,
+#: «della Provincia autonoma». Only the two autonomous provinces make laws: a bare «della
+#: provincia» names none.
+_PROVINCIA = (rf"{_DI}?(?:(?:(?:provincia|prov\.|p\.)\s*(?:autonoma\s+|aut\.\s*|a\.\s*)?"
+              rf"{_DI}?)?{_PROVINCE}\b|provincia\s+autonoma\b|p\.?\s?a\.?[tb]\.?(?![a-zà-ù]))")
+#: «TN», «BZ»: only right after the act's number («legge 13/1997 TN») or in brackets («(BZ)»).
+_TN_BZ = r"(?:\s+|\s*\(\s*)(?:tn|bz)\b"
+_NOME_PROVINCIALE = re.compile(
+    rf"^(?:{_SIGLA_PROVINCIALE}(?![a-zà-ù])|{_LEGGE}\s*{_PROVINCIA}"
+    rf"|{_LEGGE}\s*{_ESTREMI}(?:{_SEP_LOCALE}(?:{_PROVINCIA}|provinciale\b)|{_TN_BZ}))",
+    re.IGNORECASE,
+)
+#: A provincial law cited in prose, with a number (as LEGGE_REGIONALE_NEL_TESTO).
+LEGGE_PROVINCIALE_NEL_TESTO = re.compile(
+    rf"\b(?:{_SIGLA_PROVINCIALE}(?![a-zà-ù])[\s,]*(?:{_PROVINCIA}[\s,]*)?(?:{_ESTREMI}|n\.\s*\d+\b)"
+    rf"|{_LEGGE}\s*{_PROVINCIA}[\s,]*{_ESTREMI}"
+    rf"|{_LEGGE}\s*{_ESTREMI}(?:{_SEP_LOCALE}(?:{_PROVINCIA}|provinciale\b)|{_TN_BZ}))",
+    re.IGNORECASE,
+)
+
+
+def legge_provinciale(name: str) -> bool:
+    """Whether an act name is a law of the Province autonome di Trento or di Bolzano («l.p.
+    13/1997», «legge provinciale Trento 13/1997», «legge 13/1997 della Provincia autonoma di Trento»)."""
+    return bool(_NOME_PROVINCIALE.match(_strip_leading_words(_normalize_key(name or ""))))
+
+
+def fonte_locale(name: str) -> "str | None":
+    """What cite_law answers for a regional or provincial law's name, else None. Neither is ever
+    resolved: read as the State's act of the same number it would be the wrong act."""
+    if legge_regionale(name):
+        return LEGGI_REGIONALI_NON_COPERTE
+    if legge_provinciale(name):
+        return LEGGI_PROVINCIALI_NON_COPERTE
+    return None
+
+
+def tipo_locale(tipo_atto: str) -> "str | None":
+    """What to answer for an act type of a Region or an autonomous province (a regional or
+    provincial law, a URN kind «regione.toscana:legge», «provincia.trento:legge»), else None.
+    Norma builds no Normattiva address for it."""
+    tipo = _normalize_key(tipo_atto or "")
+    if re.match(r"^(?:urn:nir:)?regione\b", tipo):
+        return LEGGI_REGIONALI_NON_COPERTE
+    if re.match(r"^(?:urn:nir:)?provincia\b", tipo):
+        return LEGGI_PROVINCIALI_NON_COPERTE
+    return fonte_locale(tipo)
+
+
+# ---------------------------------------------------------------------------
+# SIGLE DATATE — sigle whose act follows the date (LI-086)
+# ---------------------------------------------------------------------------
+#
+# The fiscal reform's testi unici replace older acts from the day they apply, which is not the
+# day they enter into force. Until then a sigla names the old act, with a one-line notice of
+# the change; from that day it names the new testo unico. Only acts that follow one another in
+# time are split this way: two acts at the same date stay ambiguous (NOMI_AMBIGUI, «TUA»).
+# The reference date is the one the caller gives (``resolve_atto(name, data=…)``), else today
+# through ``_clock``. Every date and every set of estremi below was read on Normattiva, act by
+# act, on 18 November 2026; the new testi unici are each the annex («allegato 1») of the decree.
+
+
+class Periodo(NamedTuple):
+    """One span of a dated sigla: from *dal* (ISO day, "" for always) the act it names."""
+
+    dal: str
+    atto: dict
+    #: The act as the notices name it: «d.lgs. 19 giugno 2026, n. 117 (…)».
+    estremi: str
+    #: The one-line notice that goes with the act in this span, or None.
+    avviso: "str | None" = None
+
+
+_MESI_NOMI = _MESI_ESTESI.split("|")
+
+
+def giorno_esteso(iso: str) -> str:
+    """«1° gennaio 2027» for "2027-01-01": the ordinal on the first of the month, as the law writes it."""
+    giorno = date.fromisoformat(iso)
+    return f"{'1°' if giorno.day == 1 else giorno.day} {_MESI_NOMI[giorno.month - 1]} {giorno.year}"
+
+
+def _succede(vecchio: dict, nuovo: dict, dal: str, estremi_vecchio: str, estremi_nuovo: str) -> tuple:
+    """The two spans of a sigla that passes from *vecchio* to *nuovo* on *dal*."""
+    return (Periodo("", vecchio, estremi_vecchio, f"dal {giorno_esteso(dal)} si applica il {estremi_nuovo}"),
+            Periodo(dal, nuovo, estremi_nuovo))
+
+
+_DPR = "decreto del presidente della repubblica"
+_DLGS = "decreto legislativo"
+
+#: TUIR: d.lgs. 19 giugno 2026, n. 117 approves the testo unico as its annex (art. 1); the testo
+#: unico applies from 1 January 2027 (its art. 377). Normattiva, 18 November 2026.
+_TUIR = _succede(
+    {"tipo_atto": _DPR, "data": "1986-12-22", "numero_atto": "917"},
+    {"tipo_atto": _DLGS, "data": "2026-06-19", "numero_atto": "117", "allegato": "1"},
+    "2027-01-01", "d.P.R. 22 dicembre 1986, n. 917",
+    "d.lgs. 19 giugno 2026, n. 117 (testo unico delle imposte sui redditi)")
+#: Registro: d.lgs. 1° agosto 2025, n. 123, annex (art. 1); applies from 1 January 2027 (its art.
+#: 205 co. 1, the date as replaced by art. 4 co. 5 d.l. 200/2025; decision LI-061, and
+#: lib/_transizione.DPR_131_1986). Normattiva, 18 November 2026.
+_TU_REGISTRO_2025 = "d.lgs. 1° agosto 2025, n. 123 (testo unico dell'imposta di registro e degli altri tributi indiretti)"
+_REGISTRO = _succede(
+    {"tipo_atto": _DPR, "data": "1986-04-26", "numero_atto": "131"},
+    {"tipo_atto": _DLGS, "data": "2025-08-01", "numero_atto": "123", "allegato": "1"},
+    "2027-01-01", "d.P.R. 26 aprile 1986, n. 131", _TU_REGISTRO_2025)
+#: IVA: d.lgs. 19 gennaio 2026, n. 10, annex (art. 1); applies from 1 January 2027 (its art.
+#: 171). Normattiva, 18 November 2026.
+_IVA = _succede(
+    {"tipo_atto": _DPR, "data": "1972-10-26", "numero_atto": "633"},
+    {"tipo_atto": _DLGS, "data": "2026-01-19", "numero_atto": "10", "allegato": "1"},
+    "2027-01-01", "d.P.R. 26 ottobre 1972, n. 633",
+    "d.lgs. 19 gennaio 2026, n. 10 (testo unico dell'imposta sul valore aggiunto)")
+#: Successioni e donazioni: art. 204 co. 1 lett. l) of the registro testo unico repeals most of
+#: d.lgs. 346/1990 from the date of its art. 205 (1 January 2027; Normattiva, 18 November 2026).
+#: The sigla stays on d.lgs. 346/1990 after that day, which cite_law then shows as repealed: it
+#: is not the new testo unico's sigla, and the article numbers differ (LI-086).
+_DLGS_346_1990 = {"tipo_atto": _DLGS, "data": "1990-10-31", "numero_atto": "346"}
+_SUCCESSIONI = (
+    Periodo("", _DLGS_346_1990, "d.lgs. 31 ottobre 1990, n. 346",
+            f"dal 1° gennaio 2027 si applica il {_TU_REGISTRO_2025}"),
+    Periodo("2027-01-01", _DLGS_346_1990, "d.lgs. 31 ottobre 1990, n. 346"),
+)
+#: Giustizia tributaria: the testo unico is the annex of d.lgs. 14 novembre 2024, n. 175 (checked
+#: 9 November 2026, G-440: cited by name, an article is the annex's; as «d.lgs. 175/2024» the
+#: decree's own art. 1 stays the decree's). It applies from 1 January 2027 (its art. 131 co. 1,
+#: the date as replaced by art. 4 co. 3 d.l. 200/2025; Normattiva, 18 November 2026). No older
+#: act answers its name: only the notice, which names no act the official text does not.
+_TUGT_ATTO = {"tipo_atto": _DLGS, "data": "2024-11-14", "numero_atto": "175", "allegato": "1"}
+_TUGT = (
+    Periodo("", _TUGT_ATTO, "d.lgs. 14 novembre 2024, n. 175",
+            "il testo unico della giustizia tributaria si applica dal 1° gennaio 2027 (art. 131, comma 1, "
+            "come modificato dall'art. 4, comma 3, d.l. 200/2025); fino ad allora valgono le disposizioni "
+            "previgenti"),
+    Periodo("2027-01-01", _TUGT_ATTO, "d.lgs. 14 novembre 2024, n. 175"),
+)
+
+#: Sigla → its spans, at the caller's date or today.
+SIGLE_DATATE: dict[str, tuple] = {
+    **dict.fromkeys(("tuir", "testo unico delle imposte sui redditi", "testo unico imposte sui redditi",
+                     "testo unico imposte redditi", "tu imposte redditi"), _TUIR),
+    **dict.fromkeys(("tur", "tu registro", "testo unico registro", "testo unico dell'imposta di registro",
+                     "testo unico imposta di registro"), _REGISTRO),
+    **dict.fromkeys(("tuiva", "tu iva", "testo unico iva"), _IVA),
+    **dict.fromkeys(("tu successioni", "testo unico sulle successioni e donazioni",
+                     "testo unico successioni e donazioni"), _SUCCESSIONI),
+    **dict.fromkeys(("testo unico della giustizia tributaria", "testo unico giustizia tributaria",
+                     "testo unico delle disposizioni legislative in materia di giustizia tributaria",
+                     "tu giustizia tributaria", "t.u. giustizia tributaria", "tugt"), _TUGT),
+}
+
+#: The codice dei contratti pubblici: three codes in succession. D.lgs. 163/2006 in force from 1
+#: July 2006 (its art. 257, sixty days after GU n. 100 of 2 May 2006; the act page says
+#: «Entrata in vigore del decreto: 1-7-2006»); d.lgs. 50/2016 from 19 April 2016, the day of its
+#: publication (its art. 220; GU n. 91 of 19 April 2016); d.lgs. 36/2023 effective from 1 July
+#: 2023 (its art. 229 co. 2), when d.lgs. 50/2016 is repealed (art. 226 co. 1). Normattiva, 18
+#: November 2026. Read ONLY with an explicit date: the switch lies in the past, so «today» would
+#: silently move every older citation to the 2023 code. Without a date each name keeps what it
+#: resolved to before (codice degli appalti → 163/2006, codice dei contratti pubblici → 36/2023,
+#: cod. app. → ambiguous). No MCP tool passes a date to the resolver yet: only the library does.
+_CONTRATTI_PUBBLICI = (
+    Periodo("2006-07-01", {"tipo_atto": _DLGS, "data": "2006-04-12", "numero_atto": "163"},
+            "d.lgs. 12 aprile 2006, n. 163"),
+    Periodo("2016-04-19", {"tipo_atto": _DLGS, "data": "2016-04-18", "numero_atto": "50"},
+            "d.lgs. 18 aprile 2016, n. 50"),
+    Periodo("2023-07-01", {"tipo_atto": "codice dei contratti pubblici", "data": "2023-03-31", "numero_atto": "36"},
+            "d.lgs. 31 marzo 2023, n. 36"),
+)
+SIGLE_DATATE_CON_DATA: dict[str, tuple] = dict.fromkeys(
+    ("codice dei contratti pubblici", "codice degli appalti", "cod. app."), _CONTRATTI_PUBBLICI)
+
+
+def data_di_riferimento(data: "date | str | None") -> "date | None":
+    """The reference date a caller gave, as a date; None when none is given (None, "", "  ").
+
+    A date, a datetime (its day) or "YYYY-MM-DD". Anything else raises ValueError, whatever the
+    name it comes with: a malformed date is the caller's error, never silently today.
+    """
+    if data is None or (isinstance(data, str) and not data.strip()):
+        return None
+    if isinstance(data, datetime):
+        return data.date()
+    if isinstance(data, date):
+        return data
+    try:
+        return date.fromisoformat(str(data).strip())
+    except ValueError:
+        raise ValueError(f"data di riferimento non valida: {data!r} (attesa AAAA-MM-GG)") from None
+
+
+def _giorno(data: "date | None") -> date:
+    """The reference date already read by ``data_di_riferimento``, else today through ``_clock``."""
+    return _clock.today() if data is None else data
+
+
+def _periodi(key: str, con_data: bool) -> "tuple | None":
+    """The spans of a dated sigla keyed *key* (the dated-only ones with an explicit date)."""
+    if key in SIGLE_DATATE:
+        return SIGLE_DATATE[key]
+    if con_data:
+        return SIGLE_DATATE_CON_DATA.get(key) or SIGLE_DATATE_CON_DATA.get(normalize_act_type(key))
+    return None
+
+
+def _alla_data(periodi: tuple, giorno: date) -> dict | None:
+    """The act a dated sigla names on *giorno*, with its notice under "avviso"; None before the first."""
+    scelto = None
+    for periodo in periodi:
+        if not periodo.dal or date.fromisoformat(periodo.dal) <= giorno:
+            scelto = periodo
+    if scelto is None:
+        return None
+    atto = dict(scelto.atto)
+    if scelto.avviso:
+        atto["avviso"] = scelto.avviso
+    return atto
+
+
+def sigla_senza_atto(name: str, *, data: "date | str | None" = None) -> "str | None":
+    """What cite_law answers for a dated sigla asked at a date before its first act, else None."""
+    giorno = data_di_riferimento(data)
+    if giorno is None:
+        return None
+    for key in _candidate_keys(name):
+        periodi = _periodi(key, True)
+        if periodi and _alla_data(periodi, giorno) is None:
+            primo = periodi[0]
+            return (f"il {giorno.strftime('%d/%m/%Y')} nessun atto rispondeva a «{name.strip()}»: il primo, "
+                    f"{primo.estremi}, si applica dal {giorno_esteso(primo.dal)}")
+        if periodi:
+            return None
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -255,7 +799,9 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
         "disposizioni di attuazione del codice di procedura penale", "disp. att. cpp"]),
     ("decreto legislativo", "2003-06-30", "196", ["codice della privacy"]),
     ("decreto legislativo", "2006-04-03", "152", [
-        "codice dell'ambiente", "codice ambiente", "testo unico ambientale", "tua"]),
+        # «TUA» alone is also the testo unico accise: ambiguous (NOMI_AMBIGUI, LI-086).
+        "codice dell'ambiente", "codice ambiente", "testo unico ambientale",
+        "tu ambiente", "testo unico ambiente", "tuamb"]),
     ("decreto legislativo", "2017-07-03", "117", ["codice del terzo settore"]),
     ("decreto legislativo", "2023-03-31", "36", ["nuovo codice appalti"]),
     ("decreto legislativo", "2006-04-12", "163", [
@@ -263,7 +809,7 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
 
     # --- Lavoro --------------------------------------------------------------
     ("legge", "1970-05-20", "300", [
-        "statuto dei lavoratori", "statuto lavoratori", "statuto dei diritti dei lavoratori"]),
+        "statuto dei lavoratori", "statuto lavoratori", "statuto dei diritti dei lavoratori", "st. lav."]),
     ("decreto legislativo", "2001-03-30", "165", [
         "testo unico sul pubblico impiego", "testo unico pubblico impiego",
         "tu pubblico impiego", "tupi"]),
@@ -299,7 +845,7 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
 
     # --- Impresa, crisi, societario -----------------------------------------
     ("regio decreto", "1942-03-16", "267", [
-        "legge fallimentare", "l. fall.", "legge fall."]),
+        "legge fallimentare", "l. fall.", "legge fall.", "l.f."]),
     ("decreto legislativo", "2001-06-08", "231", [
         "disciplina della responsabilità amministrativa delle persone giuridiche",
         "responsabilità amministrativa degli enti", "decreto 231", "d.lgs 231"]),
@@ -315,14 +861,49 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
     # --- Amministrativo ------------------------------------------------------
     ("legge", "1990-08-07", "241", [
         "legge sul procedimento amministrativo", "legge sul procedimento",
-        "legge 241", "legge sulla trasparenza amministrativa"]),
+        "legge 241", "legge sulla trasparenza amministrativa", "l. proc. amm."]),
     ("decreto legislativo", "2000-08-18", "267", [
         "testo unico degli enti locali", "testo unico enti locali", "tu enti locali", "tuel"]),
     ("decreto del presidente della repubblica", "2001-06-06", "380", [
-        "testo unico edilizia", "testo unico dell'edilizia", "tu edilizia"]),
+        "testo unico edilizia", "testo unico dell'edilizia", "tu edilizia", "t.u.ed.",
+        # «TUED», «T.U.E.D.», «TUEd» (G-440): «TUE» alone stays the Treaty on European Union.
+        "tued"]),
+    # Laws by their nickname (G-440; titles checked on Normattiva, 11 November 2026).
+    ("legge", "2019-07-19", "69", ["codice rosso"]),
+    ("legge", "2024-03-05", "21", ["legge capitali"]),
+    # Testi unici and nicknames of the second alias pass (G-440): heading and title of each
+    # checked on Normattiva, 11 November 2026; each act calls itself «testo unico» where the
+    # alias says so. Not keyed here: «TUIVA» and «T.U. registro», which follow the date (the old
+    # acts until the new testi unici apply, SIGLE_DATATE, LI-086); and, because more than one act
+    # answers them, «T.U. rinnovabili» (d.lgs. 190/2024 does not call itself one), «decreto FER»,
+    # «decreto CER» (see NOMI_AMBIGUI).
+    ("decreto del presidente della repubblica", "2002-05-30", "115", [
+        "testo unico spese di giustizia", "testo unico delle spese di giustizia",
+        "testo unico in materia di spese di giustizia", "tu spese di giustizia", "tusg"]),
+    ("decreto del presidente della repubblica", "2000-12-28", "445", [
+        "testo unico documentazione amministrativa", "testo unico sulla documentazione amministrativa",
+        "tu documentazione amministrativa", "tuda"]),
+    ("decreto legislativo", "1995-10-26", "504", ["testo unico accise", "tu accise"]),
+    # Repealed whole by d.lgs. 26 settembre 2024, n. 141: the identity of historical citations.
+    ("decreto del presidente della repubblica", "1973-01-23", "43", [
+        "testo unico leggi doganali", "testo unico delle leggi doganali", "testo unico doganale", "tuld"]),
+    ("decreto legislativo", "2021-11-08", "208", [
+        "tusma"]),
+    ("decreto legislativo", "2005-07-31", "177", [
+        "testo unico dei servizi di media audiovisivi e radiofonici", "tusmar"]),
+    ("decreto del presidente della repubblica", "2010-03-15", "90", [
+        "testo unico ordinamento militare", "testo unico delle disposizioni regolamentari in materia di "
+        "ordinamento militare", "tuom"]),
+    ("legge", "2015-08-07", "124", ["legge madia"]),
+    ("decreto legge", "2012-09-13", "158", ["legge balduzzi", "decreto balduzzi"]),
+    ("decreto legislativo", "2023-03-10", "24", ["decreto whistleblowing"]),
+    ("decreto legge", "2018-07-12", "87", ["decreto dignità", "decreto dignita"]),
+    ("decreto legge", "2024-05-29", "69", ["decreto salva casa", "decreto salva-casa", "decreto salvacasa"]),
+    # «Provvedimenti per la cooperazione» (Normattiva's title, checked 11 November 2026).
+    ("decreto legislativo del capo provvisorio dello stato", "1947-12-14", "1577", ["legge basevi"]),
     ("decreto del presidente della repubblica", "2001-06-08", "327", [
         "testo unico sulle espropriazioni per pubblica utilità",
-        "testo unico espropriazioni", "tu espropri", "tu espropriazioni"]),
+        "testo unico espropriazioni", "tu espropri", "tu espropriazioni", "tues", "tuespr"]),
     ("decreto del presidente della repubblica", "1971-11-24", "1199", [
         "semplificazione dei procedimenti in materia di ricorsi amministrativi",
         "ricorsi amministrativi"]),
@@ -353,7 +934,7 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
     ("legge", "1975-07-26", "354", [
         "legge sull'ordinamento penitenziario", "ordinamento penitenziario"]),
     ("decreto del presidente della repubblica", "1990-10-09", "309", [
-        "testo unico stupefacenti", "testo unico sugli stupefacenti", "tu stupefacenti"]),
+        "testo unico stupefacenti", "testo unico sugli stupefacenti", "tu stupefacenti", "tustup"]),
     ("regio decreto", "1931-06-18", "773", [
         "testo unico delle leggi di pubblica sicurezza", "testo unico di pubblica sicurezza",
         "tulps", "tu pubblica sicurezza"]),
@@ -369,7 +950,9 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
     ("legge", "1941-04-22", "633", [
         "legge sulla protezione del diritto d'autore", "legge sul diritto d'autore",
         "legge diritto d'autore", "lda"]),
-    ("decreto legislativo", "1998-12-09", "431", [
+    # A legge, not a decreto legislativo: the type was wrong and every lookup was refused
+    # (live gate, 11 November 2026: Normattiva titles it «LEGGE 9 dicembre 1998, n. 431»).
+    ("legge", "1998-12-09", "431", [
         "legge sulle locazioni abitative", "locazioni abitative"]),
     ("legge", "1978-07-27", "392", ["legge equo canone", "equo canone"]),
     ("legge", "1982-05-03", "203", ["norme sui contratti agrari", "legge sui contratti agrari"]),
@@ -384,10 +967,9 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
         "statuto del contribuente", "statuto dei diritti del contribuente"]),
     ("decreto legislativo", "2000-03-10", "74", [
         "legge sui reati tributari", "reati tributari"]),
-    ("decreto del presidente della repubblica", "1986-04-26", "131", [
-        "testo unico dell'imposta di registro", "testo unico imposta di registro", "tur"]),
-    ("decreto del presidente della repubblica", "1972-10-26", "633", [
-        "testo unico iva", "decreto iva"]),
+    # D.P.R. 131/1986 («TUR», «testo unico dell'imposta di registro») and the «testo unico iva»
+    # follow the date: SIGLE_DATATE (LI-086).
+    ("decreto del presidente della repubblica", "1972-10-26", "633", ["decreto iva"]),
     ("decreto del presidente della repubblica", "1973-09-29", "600", [
         "disposizioni comuni in materia di accertamento delle imposte sui redditi",
         "decreto accertamento"]),
@@ -404,9 +986,7 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
     ("decreto legislativo", "1992-12-30", "504", [
         "riordino della finanza degli enti territoriali"]),
     ("decreto legge", "1994-09-30", "564", ["disposizioni urgenti in materia fiscale"]),
-    ("decreto legislativo", "1990-10-31", "346", [
-        "testo unico sulle successioni e donazioni", "testo unico successioni e donazioni",
-        "tu successioni"]),
+    # D.lgs. 346/1990 («TU successioni») carries the notice of the registro testo unico: SIGLE_DATATE.
 
     # --- Terzo settore e no-profit -------------------------------------------
     ("legge", "1991-08-11", "266", ["legge quadro sul volontariato", "legge sul volontariato"]),
@@ -415,7 +995,7 @@ _ATTI_DENOMINATI_SPEC: list[tuple[str, str, str, list[str]]] = [
 
     # --- Immigrazione --------------------------------------------------------
     ("decreto legislativo", "1998-07-25", "286", [
-        "testo unico sull'immigrazione", "testo unico immigrazione", "tu immigrazione"]),
+        "testo unico sull'immigrazione", "testo unico immigrazione", "tu immigrazione", "tuimm"]),
     ("legge", "2002-07-30", "189", ["legge bossi-fini", "legge bossi fini"]),
 
     # --- Processo civile: mediazione e durata --------------------------------
@@ -508,6 +1088,15 @@ NORMATTIVA_SEARCH = {
     "cod. amm. dig.": "codice dell'amministrazione digitale",
     "cod. antimafia": "codice antimafia",
     "cod. ass. priv.": "codice delle assicurazioni private",
+    # More spellings of the codes (G-440).
+    "cod. ass.": "codice delle assicurazioni private",
+    # The values here are act types (api's _TIPI_NOTI reads them): the code's own name, never
+    # another alias («codice privacy» is a key of ATTI_NOTI, not a type).
+    "cod. priv.": "codice in materia di protezione dei dati personali",
+    "c.priv.": "codice in materia di protezione dei dati personali",
+    "c. priv.": "codice in materia di protezione dei dati personali",
+    "codice urbani": "codice dei beni culturali e del paesaggio",
+    "cbcp": "codice dei beni culturali e del paesaggio",
     "cod. beni cult.": "codice dei beni culturali e del paesaggio",
     "cod. civ.": "codice civile",
     "cod. com. elet.": "codice delle comunicazioni elettroniche",
@@ -579,6 +1168,16 @@ NORMATTIVA_SEARCH = {
     "disp. att. cpp": "norme di attuazione, di coordinamento e transitorie del codice di procedura penale",
     "att. c.p.p.": "norme di attuazione, di coordinamento e transitorie del codice di procedura penale",
     "norme att. c.p.p.": "norme di attuazione, di coordinamento e transitorie del codice di procedura penale",
+    "norme att. cod. proc. pen.": "norme di attuazione, di coordinamento e transitorie del codice di procedura penale",
+    # Other spellings of the codes (G-440): an external citation corpus.
+    "codice della crisi e dell'insolvenza": "codice della crisi d'impresa e dell'insolvenza",
+    "codice della crisi d'impresa": "codice della crisi d'impresa e dell'insolvenza",
+    "c. crisi impresa": "codice della crisi d'impresa e dell'insolvenza",
+    "cod. contratti pubblici": "codice dei contratti pubblici",
+    "codice dei beni culturali": "codice dei beni culturali e del paesaggio",
+    "codice della proprieta' industriale": "codice della proprietà industriale",
+    "preleggi al codice civile": "preleggi",
+    "costituzione italiana": "costituzione",
     "c.p.m.p.": "codice penale militare di pace",
     "c.p.m.p": "codice penale militare di pace",
     "cpmp": "codice penale militare di pace",
@@ -965,6 +1564,14 @@ def _strip_leading_words(key: str) -> str:
 _DOTTED_ACRONYM = re.compile(r"^[a-zà-ù]+(?:\.[a-zà-ù]*)+$", re.IGNORECASE)
 
 
+#: Sigle that are also an abbreviated month: «mar.» in «17 mar. 2020» is March, never the
+#: MAR. They are read only as written, without dots (no dotted-acronym collapse).
+SIGLE_COME_MESI = frozenset({"mar"})
+
+# «t.u. edilizia», «T.U. bancario», «t. u. enti locali»: the testi unici are keyed «tu …».
+_TU_PUNTATO = re.compile(r"^t\.\s?u\.\s+")
+
+
 def _candidate_keys(name: str):
     """Yield lookup keys for an act name, most literal first.
 
@@ -973,9 +1580,11 @@ def _candidate_keys(name: str):
     """
     seen = set()
     normalized = _normalize_key(name)
-    candidates = [name.strip(), normalized, _strip_leading_words(normalized)]
-    if _DOTTED_ACRONYM.match(normalized):
+    stripped = _strip_leading_words(normalized)
+    candidates = [name.strip(), normalized, stripped]
+    if _DOTTED_ACRONYM.match(normalized) and normalized.replace(".", "") not in SIGLE_COME_MESI:
         candidates.append(normalized.replace(".", ""))
+    candidates += [_TU_PUNTATO.sub("tu ", c) for c in (normalized, stripped) if _TU_PUNTATO.match(c)]
     for candidate in candidates:
         if candidate and candidate not in seen:
             seen.add(candidate)
@@ -1019,18 +1628,52 @@ def _lookup_key(key: str) -> dict | None:
     return None
 
 
-def resolve_atto(name: str) -> dict | None:
+def resolve_atto(name: str, *, data: "date | str | None" = None) -> dict | None:
     """Resolve a common act name to scraper parameters.
 
-    Returns {"tipo_atto", "data", "numero_atto"} or None. Never guesses: an
-    unrecognised name yields None so the caller can report it rather than cite
-    the wrong act.
+    Returns {"tipo_atto", "data", "numero_atto"} (and "allegato" for an act whose text is
+    an annex) or None. Never guesses: an unrecognised name yields None so the caller can
+    report it rather than cite the wrong act. A regional or provincial law is never resolved.
+
+    *data* is the reference date ("YYYY-MM-DD" or a date) for the sigle that follow it
+    (``SIGLE_DATATE``); without it they are read at today's date (``_clock``), and the
+    ``SIGLE_DATATE_CON_DATA`` keep their undated resolution. A dated sigla's act carries
+    its notice under "avviso" while one is due (LI-086).
     """
+    data = data_di_riferimento(data)  # first: a malformed date is refused for every name
+    if fonte_locale(name):
+        return None
+    con_data = data is not None
     for key in _candidate_keys(name):
+        periodi = _periodi(key, con_data)
+        if periodi:
+            return _alla_data(periodi, _giorno(data))
         result = _lookup_key(key)
         if result:
             return result
-    return _sigla_di_allegato(name)
+    return _regolamento_per_soprannome(name) or _sigla_di_allegato(name)
+
+
+# «Regolamento DORA», «Regolamento (UE) eIDAS», «regolamento europeo MAR»: the word before a
+# regulation's nickname.
+_REGOLAMENTO_PREFISSO = re.compile(r"^(?:il\s+)?regolamento\s+(?:\(?\s*ue\s*\)?\s+|europeo\s+)?", re.IGNORECASE)
+
+
+def _regolamento_per_soprannome(name: str) -> dict | None:
+    """«Regolamento <nickname>» when the nickname is an EU regulation of ATTI_NOTI, else None.
+
+    Only a regulation ATTI_NOTI keys by that nickname (hand-verified): «Regolamento DORA» is
+    reg. (UE) 2022/2554, but «regolamento condominiale» or «Regolamento Emittenti» (Consob)
+    name no EU act, and «regolamento NIS2» is not one either (NIS2 is a directive).
+    """
+    resto = _REGOLAMENTO_PREFISSO.sub("", _normalize_key(name), count=1)
+    if not resto or resto == _normalize_key(name):
+        return None
+    for key in _candidate_keys(resto):
+        entry = ATTI_NOTI.get(key)
+        if entry and entry["tipo_atto"] == "regolamento ue":
+            return dict(entry)
+    return None
 
 
 #: The code sigle of more than one word, read in any spacing or dotting as the annex sigle are.
@@ -1088,7 +1731,8 @@ def strip_leading_particles(name: str) -> str:
 
 def known_act_names() -> list[str]:
     """Every act name the resolver recognises — used to suggest near misses."""
-    return sorted(set(ATTI_NOTI) | set(ATTI_DENOMINATI) | set(NORMATTIVA_SEARCH) | set(NORMATTIVA_URN_CODICI))
+    return sorted(set(ATTI_NOTI) | set(ATTI_DENOMINATI) | set(NORMATTIVA_SEARCH) | set(NORMATTIVA_URN_CODICI)
+                  | set(SIGLE_DATATE))
 
 
 def _brocardi_by_identity(tipo_atto: str, numero_atto: str, data: str) -> str | None:

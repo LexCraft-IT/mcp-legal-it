@@ -23,6 +23,9 @@ GERARCHIA DELLE FONTI
    - Decreti legislativi (D.Lgs.): delegati dal Parlamento al Governo (art. 76 Cost.)
    - Decreti legge (D.L.): urgenza, convertiti entro 60 giorni (art. 77 Cost.)
    → Citazione: "art. 5 L. 241/1990" / "art. 13 D.Lgs. 196/2003" / "art. 1 D.L. 18/2020"
+   - Leggi regionali (L.R.) e leggi provinciali di Trento e Bolzano (L.P.): non coperte dai tool
+     del server, vanno verificate sul Bollettino ufficiale o sulla banca dati della Regione o della
+     Provincia
 
 4. FONTI SECONDARIE
    - Regolamenti governativi (D.P.R.)
@@ -91,7 +94,7 @@ cite_law accetta riferimenti in linguaggio naturale:
 - "art. 2043 c.c." → Codice Civile, art. 2043
 - "art. 6 D.Lgs. 231/2001" → D.Lgs. 231/2001, art. 6
 - "art. 117 Costituzione" → Costituzione, art. 117
-- "art. 33 GDPR" con include_annotations=true → testo + giurisprudenza + dottrina
+- "art. 33 GDPR" con include_annotations=true → testo + annotazioni Brocardi, se attive in questa installazione
 
 Supporta: Codice Civile, Penale, Proc. Civile, Proc. Penale, Costituzione,
 GDPR, D.Lgs. 196/2003, D.Lgs. 231/2001, TUF, TUIR, e molti altri.
