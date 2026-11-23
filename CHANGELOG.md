@@ -7,10 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.0.0-beta.4] - 2026-11-03
+## [3.0.0-beta.5] - 2026-11-23
 
-Fourth beta of 3.0, cut from develop. Published as a GitHub pre-release: the
-stable channel keeps serving 2.x. The entries below are the 3.0 work so far.
+Fifth beta of 3.0 and the release candidate for the GA, cut from develop.
+Published as a GitHub pre-release: the stable channel keeps serving 2.x. The
+entries below are the whole 3.0 work so far, 3.0.0-beta.4 (2026-11-03)
+included; the GitHub release notes list what changed since that beta.
 
 3.0 is 2.17.0 plus the work below. Every 2.x change from 2.13.0 to 2.17.0 is
 included (the benchmark corrections of 2.15.x, paged reading of long texts with
