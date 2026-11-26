@@ -25,7 +25,7 @@ Chiama `legal-it:rivalutazione_monetaria` con l'importo del credito, dalla data 
 
 ### 3. Decreto ingiuntivo
 
-Chiama `legal-it:decreto_ingiuntivo` con l'importo del credito per verificare:
+Chiama `legal-it:decreto_ingiuntivo` con l'importo del credito e, per un credito commerciale (imprese/PA, D.Lgs. 231/2002), `tipo_credito='commerciale'`: la bozza chiede allora gli interessi moratori dal giorno successivo alla scadenza, senza costituzione in mora (art. 4, co. 1). Verifica:
 
 - Competenza — Giudice di Pace fino a € 10.000 per i procedimenti instaurati dal 28/2/2023 (riforma Cartabia, D.Lgs. 149/2022); fino a € 5.000 per quelli anteriori. Oltre la soglia, Tribunale.
 - Contributo unificato dovuto

@@ -567,7 +567,9 @@ class TestDecretoIngiuntivo:
     def test_provvisoria_esecuzione_ordinario_due_motivi_art_642_co_2(self):
         # Art. 642 co. 2 c.p.c. (read 2026-11-26): danger of serious prejudice, «ovvero» documentation
         # signed by the debtor proving the right
-        for tipo in ("ordinario", "commerciale"):
+        # the norm does not distinguish the kind of credit: labour credits, which had the danger ground
+        # only, get both too
+        for tipo in ("ordinario", "commerciale", "retribuzioni"):
             r = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=5000, tipo_credito=tipo,
                       provvisoria_esecuzione=True)
             motivi = r["riepilogo"]["motivi_pe"]

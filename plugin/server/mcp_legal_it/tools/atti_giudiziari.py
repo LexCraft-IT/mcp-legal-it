@@ -715,7 +715,7 @@ def decreto_ingiuntivo(
             motivi_pe.append("credito fondato su delibera assembleare di approvazione spese (art. 63 disp. att. c.c.)")
         elif tipo_credito == "cambiale":
             motivi_pe.append("credito fondato su cambiale (art. 642 co. 1 c.p.c.)")
-        else:
+        else:  # ordinario, commerciale, retribuzioni
             # Art. 642 co. 2 c.p.c.: two alternative grounds; the lawyer keeps the one that applies
             motivi_pe.append("vi è pericolo di grave pregiudizio nel ritardo (art. 642 co. 2 c.p.c.) [illustrare]")
             motivi_pe.append(
@@ -737,9 +737,9 @@ def decreto_ingiuntivo(
         )
         riferimenti_interessi = "; artt. 4 e 5 D.Lgs. 231/2002 (interessi moratori)"
         avvertenze.append(
-            "Credito commerciale: per il ricorso con l'elenco delle fatture usare "
-            "genera_modello_atto(tipo_atto='decreto_ingiuntivo_fatture'); gli interessi di mora di ciascuna "
-            "fattura si calcolano con interessi_mora (data_inizio = scadenza della fattura)"
+            "Credito commerciale: il modello decreto_ingiuntivo_fatture (genera_modello_atto) aggiunge l'elenco "
+            "delle fatture; gli interessi di mora di ciascuna fattura si calcolano con interessi_mora "
+            "(data_inizio = scadenza della fattura)"
         )
     elif tipo_credito == "ordinario":
         # Art. 1282 co. 1 c.c.: a liquid and due money credit bears interest by operation of law, with no

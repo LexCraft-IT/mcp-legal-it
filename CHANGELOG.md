@@ -1096,10 +1096,11 @@ described in those sections, not repeated here. Upgrading from 2.x:
     warning gives the limits of both norms: what the law or the title provides otherwise, rents only from
     the formal demand (art. 1282 co. 2), co. 4 only if the parties did not fix the rate. The
     `decreto_ingiuntivo_ordinario` model sends a commercial credit to `decreto_ingiuntivo_fatture`.
-  - **Provisional enforcement.** For an ordinary or commercial credit the draft gives both grounds of
-    art. 642 co. 2 c.p.c., the danger of serious prejudice or documentation signed by the debtor proving
-    the right, and asks to keep the one that applies. Professional, condominium, bill-of-exchange and
-    labour credits keep their clause and grounds.
+  - **Provisional enforcement.** For an ordinary, commercial or labour credit the draft gives both
+    grounds of art. 642 co. 2 c.p.c., the danger of serious prejudice or documentation signed by the
+    debtor proving the right, one per line, and asks to keep the one that applies (before, only the
+    danger). Professional, condominium and bill-of-exchange credits keep their grounds; the interest
+    clause changes only for the ordinary and commercial credit.
   - **#202, warning only.** `interessi_acconti` and the `atto_di_precetto` model say that it applies the
     legal rate of art. 1284 co. 1 c.c. only, and name `interessi_corso_causa` for the co. 4 rate, which
     takes no part payments. A rate choice on `interessi_acconti` is left to a later release.
