@@ -540,6 +540,10 @@ class TestDecretoIngiuntivo:
         assert "D.Lgs. 231/2002" in r["riferimento_normativo"]
         # the commercial draft points to the invoice model (#203, point 3)
         assert any("decreto_ingiuntivo_fatture" in a for a in r["avvertenze"])
+        # same court and contributo as an ordinary credit
+        o = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=12000)
+        assert r["riepilogo"]["giudice_competente"] == o["riepilogo"]["giudice_competente"]
+        assert r["riepilogo"]["contributo_unificato"] == o["riepilogo"]["contributo_unificato"]
 
     def test_commerciale_importo_forfettario_e_tasso_concordato(self):
         # Art. 6 co. 2 D.Lgs. 231/2002 (read 2026-11-26): «un importo forfettario di 40 euro a titolo di
@@ -561,10 +565,6 @@ class TestDecretoIngiuntivo:
         # the lump sum belongs to the commercial draft only
         o = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=12000)
         assert "forfettario" not in o["bozza_ricorso"]
-        # same court and contributo as an ordinary credit
-        o = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=12000)
-        assert r["riepilogo"]["giudice_competente"] == o["riepilogo"]["giudice_competente"]
-        assert r["riepilogo"]["contributo_unificato"] == o["riepilogo"]["contributo_unificato"]
 
     def test_ordinario_interessi_non_legati_alla_messa_in_mora(self):
         # Art. 1282 co. 1 c.c.: liquid and due money credits bear interest «di pieno diritto»;
