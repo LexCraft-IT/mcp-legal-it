@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import inspect
 import json
 import re
 import threading
@@ -81,6 +82,16 @@ def rete(monkeypatch):
 
     monkeypatch.setattr(httpx, "AsyncClient", fake)
     return script
+
+
+def _istruzioni(client) -> str:
+    """The instructions the client received: ``client.instructions`` on FastMCP 4, the
+    ``initialize`` result on FastMCP 3 (which has no era-neutral property)."""
+    istruzioni = getattr(client, "instructions", None)
+    if istruzioni is None and client.initialize_result is not None:
+        istruzioni = client.initialize_result.instructions
+    assert istruzioni is not None, "the client received no instructions"
+    return istruzioni
 
 
 def _cache_file() -> Path:
@@ -368,24 +379,31 @@ class TestDoveVa:
         try:
             testo = uc.apply(mcp, "3.0.0")
             assert testo
-            async with Client(mcp) as client:
-                assert client.initialize_result.instructions.endswith(f"AGGIORNAMENTO: {testo}\n")
-                elenco = await client.list_tools()
-                risposte = [
-                    await client.call_tool("stato_server", {}),
-                    await client.call_tool("verifica_iban", {"iban": "IT60X0542811101000000123456"}),
-                ]
-            superfici = [json.dumps([t.model_dump(mode="json") for t in elenco], ensure_ascii=False)]
-            for r in risposte:
-                superfici.append(json.dumps(
-                    {"content": [c.model_dump(mode="json") for c in r.content],
-                     "structured": r.structured_content, "meta": r.meta},
-                    ensure_ascii=False, default=str,
-                ))
-            for superficie in superfici:
-                # «AGGIORNAMENTO (n)» is a Normattiva note in some descriptions: not a marker.
-                for segno in (testo, "È disponibile Legal IT", uc.RELEASES_PAGE, "versione in uso"):
-                    assert segno not in superficie
+            # FastMCP 4 negotiates the 2026 era by default (server/discover, no initialize);
+            # Claude Desktop still uses initialize, which `mode="legacy"` forces. FastMCP 3
+            # has only initialize. Every handshake the installed version speaks is checked.
+            modi = [{}]
+            if "mode" in inspect.signature(Client.__init__).parameters:
+                modi.append({"mode": "legacy"})
+            for modo in modi:
+                async with Client(mcp, **modo) as client:
+                    assert _istruzioni(client).endswith(f"AGGIORNAMENTO: {testo}\n"), modo
+                    elenco = await client.list_tools()
+                    risposte = [
+                        await client.call_tool("stato_server", {}),
+                        await client.call_tool("verifica_iban", {"iban": "IT60X0542811101000000123456"}),
+                    ]
+                superfici = [json.dumps([t.model_dump(mode="json") for t in elenco], ensure_ascii=False)]
+                for r in risposte:
+                    superfici.append(json.dumps(
+                        {"content": [c.model_dump(mode="json") for c in r.content],
+                         "structured": r.structured_content, "meta": r.meta},
+                        ensure_ascii=False, default=str,
+                    ))
+                for superficie in superfici:
+                    # «AGGIORNAMENTO (n)» is a Normattiva note in some descriptions: not a marker.
+                    for segno in (testo, "È disponibile Legal IT", uc.RELEASES_PAGE, "versione in uso"):
+                        assert segno not in superficie, modo
         finally:
             mcp.instructions = originali
 
