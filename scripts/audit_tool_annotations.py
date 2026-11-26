@@ -239,6 +239,16 @@ CACHE_LOCATIONS = (
         "switch": "cache_enabled()",
     },
     {
+        "module": "mcp_legal_it/_update_check.py",
+        "label": "update notice",
+        "dir": "${MCP_CACHE_DIR:-~/.cache/mcp-legal-it}",
+        "files": ["update_check.json -- day of the last new-version check and the latest stable "
+                  "release it found (LEGAL_UPDATE_CHECK, .mcpb only; no tool reaches it)"],
+        "retention": "one entry, rewritten by the day's first start; read once per start",
+        "markers": ("update_check.json",),
+        "switch": "cache_enabled()",
+    },
+    {
         "module": "mcp_legal_it/lib/_refusals.py",
         "label": "refusal ledger",
         "dir": "${MCP_CACHE_DIR:-~/.cache/mcp-legal-it}",

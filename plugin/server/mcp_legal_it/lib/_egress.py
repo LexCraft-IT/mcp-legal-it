@@ -8,7 +8,11 @@ fails the build if a URL literal appears in `mcp_legal_it/` for a host not liste
 which is what makes it an assertion rather than a claim.
 
 The server sends no telemetry and has no analytics endpoint. Every host below
-is a public institutional source consulted to answer a specific question.
+is a public source consulted to answer a specific question, with one exception:
+`api.github.com`, asked once a day for the latest release by the new-version
+notice of the .mcpb build (`mcp_legal_it/_update_check.py`, off unless
+`LEGAL_UPDATE_CHECK` switches it on; the .mcpb manifest does, and its settings
+switch it off).
 """
 
 from __future__ import annotations
@@ -56,6 +60,10 @@ ALLOWED_HOSTS: dict[str, str] = {
     # crea_server(brocardi=True)), `is_allowed` refuses it and the scrapers never build
     # a request for it (lib/_brocardi_switch.py).
     "www.brocardi.it": "Brocardi.it — annotazioni dottrinali (fonte privata)",
+    # --- Update notice ---
+    # Not a source: once a day, only with LEGAL_UPDATE_CHECK=on (the .mcpb turns it on),
+    # one GET for the latest stable release, generic User-Agent (mcp_legal_it/_update_check.py).
+    "api.github.com": "GitHub — ultima versione stabile pubblicata (avviso di aggiornamento del .mcpb)",
 }
 
 #: Hosts contacted only by maintenance scripts under `scripts/`, never by the
@@ -79,14 +87,15 @@ NON_NETWORK_HOSTS: dict[str, str] = {
     "docs.oasis-open.org": "namespace Akoma Ntoso citato in un docstring",
     "www.esempio.it": "dominio segnaposto negli esempi dei docstring",
     "mozilla.org": "testo della licenza MPL-2.0 citato nell'intestazione dei file importati da VisuaLex",
+    "github.com": "pagina delle release linkata dall'avviso di aggiornamento e link doc nel README "
+                  "generato del bundle openai (scripts/build_targets.py) — mai richiesta",
 }
 
 #: Like NON_NETWORK_HOSTS, but scoped to `scripts/` only. Kept separate so the
 #: server-side tripwire stays armed: a URL for one of these hosts appearing in
-#: `mcp_legal_it/` must still fail the build.
-SCRIPT_ONLY_NON_NETWORK_HOSTS: dict[str, str] = {
-    "github.com": "link doc nel README generato del bundle openai (scripts/build_targets.py) — mai richiesto dallo script",
-}
+#: `mcp_legal_it/` must still fail the build. Empty since `github.com` moved to
+#: NON_NETWORK_HOSTS with the update notice's link (LI-096).
+SCRIPT_ONLY_NON_NETWORK_HOSTS: dict[str, str] = {}
 
 
 def is_allowed(url: str) -> bool:
