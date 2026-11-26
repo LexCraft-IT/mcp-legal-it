@@ -1134,9 +1134,9 @@ described in those sections, not repeated here. Upgrading from 2.x:
       ordinary clause.
     - Condominium: interest from each instalment of the contributions due under the approved
       apportionment (art. 63 disp. att. c.c., art. 1282 c.c.), and from the claim at the co. 4 rate.
-    - Bill of exchange: interest from maturity at the rate stated in the bill or at the legal rate,
-      plus protest and other costs (art. 55 R.D. 1669/1933, also in the direct action, artt. 33 and
-      103), and from the claim at the co. 4 rate.
+    - Bill of exchange: interest at the legal rate from maturity until the claim, then at the co. 4
+      rate, plus protest and other costs (art. 55 R.D. 1669/1933, also in the direct action, artt. 33
+      and 103). A rate stated in the bill replaces both until payment (warning).
     - Labour credit: legal interest and the greater loss from the fall in value, from the day each
       credit accrued (art. 429 co. 3 c.p.c., art. 150 disp. att. c.p.c.). A warning says that for
       public employees interest is deducted from the revaluation (art. 16 co. 6 L. 412/1991 and

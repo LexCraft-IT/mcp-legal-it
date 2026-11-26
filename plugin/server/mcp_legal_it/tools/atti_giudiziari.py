@@ -792,7 +792,7 @@ def decreto_ingiuntivo(
         # owes interest under art. 1282 c.c. The tool does not know the client: the draft gives both
         clausola_interessi = (
             "[mantenere l'ipotesi che ricorre]\n- (a) se il cliente è un'impresa o una pubblica amministrazione: "
-            f"{clausola_commerciale};\n- (b) altrimenti: {clausola_ordinaria};"
+            f"{clausola_commerciale},\n- (b) altrimenti: {clausola_ordinaria},"
         )
         separatore_spese = "\n"
         riferimenti_interessi = (
@@ -806,7 +806,7 @@ def decreto_ingiuntivo(
             "superare trenta giorni dal ricevimento della fattura o di una richiesta di pagamento di contenuto "
             "equivalente (art. 4 co. 2 lett. a). Verso un altro cliente, ipotesi (b): gli interessi decorrono "
             "dal giorno in cui il credito è divenuto liquido ed esigibile (art. 1282 co. 1 c.c.), da verificare "
-            "se il compenso non era pattuito e si determina con la parcella e il parere della competente "
+            "quando il compenso non era pattuito e va determinato con la parcella e il parere della competente "
             f"associazione professionale (art. 636 c.p.c.); {nota_1284_co_4}"
         )
         avvertenze.extend(avvertenze_231)
@@ -828,12 +828,13 @@ def decreto_ingiuntivo(
     elif tipo_credito == "cambiale":
         # Art. 55 nn. 2-3 R.D. 1669/1933 (legge cambiaria), claimed also in the direct action against the
         # acceptor (art. 33 co. 2) and the maker of a promissory note (art. 103): interest from maturity at
-        # the rate stated in the bill under art. 5 or, failing that, at the legal rate; protest and other costs
+        # the rate stated in the bill under art. 5 or, failing that, at the legal rate; protest and other costs.
+        # The clause covers the usual bill with no stated rate (legal rate until the claim, then art. 1284 co. 4);
+        # a stated rate replaces both, as the warning says
         clausola_interessi = (
-            "oltre interessi dalla scadenza del titolo [indicare] al saldo, nella misura indicata nel titolo o, "
-            "in mancanza, al tasso legale (art. 55 n. 2 R.D. 1669/1933) e, dalla domanda, "
-            f"{saggio_dalla_domanda}, e le spese per il protesto, per gli avvisi dati e le altre spese "
-            "(art. 55 n. 3 R.D. 1669/1933)"
+            "oltre interessi al tasso legale dalla scadenza del titolo [indicare] alla domanda (art. 55 n. 2 "
+            f"R.D. 1669/1933) e, dalla domanda al saldo, {saggio_dalla_domanda}, e le spese per il protesto, per "
+            "gli avvisi dati e le altre spese (art. 55 n. 3 R.D. 1669/1933)"
         )
         riferimenti_interessi = "; artt. 5, 33, 55 e 103 R.D. 1669/1933 e art. 1284 co. 4 c.c. (interessi e spese)"
         avvertenze.append(
@@ -842,7 +843,9 @@ def decreto_ingiuntivo(
             "misura indicata nel titolo a norma dell'art. 5 o, in mancanza, al tasso legale, e le spese per il "
             "protesto, per gli avvisi dati e le altre spese (art. 55). Il tasso d'interesse va indicato nella "
             "cambiale, e la promessa d'interessi vale solo nella cambiale pagabile a vista o a certo tempo vista "
-            "(art. 5); il saggio dell'art. 1284 co. 4 c.c. vale se il titolo non indica la misura degli interessi"
+            "(art. 5). Se il titolo indica il tasso, la clausola chiede gli interessi in quella misura dalla "
+            "scadenza al saldo, senza il saggio dell'art. 1284 co. 4 c.c., che vale se le parti non hanno "
+            "determinato la misura degli interessi"
         )
     else:  # retribuzioni
         # Art. 429 co. 3 c.p.c.: for labour credits, legal interest and the greater loss from the fall in value

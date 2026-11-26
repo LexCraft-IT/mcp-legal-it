@@ -594,8 +594,8 @@ class TestDecretoIngiuntivo:
         bozza = r["bozza_ricorso"]
         assert "Euro 5.000,00, [mantenere l'ipotesi che ricorre]\n" in bozza
         assert "\n- (a) se il cliente è un'impresa o una pubblica amministrazione: oltre interessi moratori" in bozza
-        assert "(art. 6 co. 2 D.Lgs. 231/2002);\n- (b) altrimenti: oltre interessi al saggio legale" in bozza
-        assert "(art. 1284 co. 4 c.c.);\noltre spese e competenze del procedimento." in bozza
+        assert "(art. 6 co. 2 D.Lgs. 231/2002),\n- (b) altrimenti: oltre interessi al saggio legale" in bozza
+        assert "(art. 1284 co. 4 c.c.),\noltre spese e competenze del procedimento." in bozza
         avv = " ".join(r["avvertenze"])
         assert "imprenditore anche chi esercita una libera professione (art. 2 co. 1 lett. a e c" in avv
         assert "trenta giorni dal ricevimento della fattura" in avv and "(art. 636 c.p.c.)" in avv
@@ -626,14 +626,17 @@ class TestDecretoIngiuntivo:
         # e le altre spese»; art. 33 co. 2: the direct action covers what arts. 55 and 56 allow
         r = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=2000, tipo_credito="cambiale")
         bozza = r["bozza_ricorso"]
-        assert ("oltre interessi dalla scadenza del titolo [indicare] al saldo, nella misura indicata nel titolo "
-                "o, in mancanza, al tasso legale (art. 55 n. 2 R.D. 1669/1933) e, dalla domanda,") in bozza
+        # two consecutive periods, never two rates at once: legal rate until the claim, then art. 1284 co. 4
+        assert ("oltre interessi al tasso legale dalla scadenza del titolo [indicare] alla domanda (art. 55 n. 2 "
+                "R.D. 1669/1933) e, dalla domanda al saldo, al saggio previsto dalla legislazione speciale") in bozza
+        assert "al saldo, nella misura" not in bozza
         assert ("e le spese per il protesto, per gli avvisi dati e le altre spese (art. 55 n. 3 R.D. 1669/1933), "
                 "oltre spese") in bozza
         avv = " ".join(r["avvertenze"])
         assert "art. 33 co. 2" in avv and "art. 103" in avv
         assert "pagabile a vista o a certo tempo vista" in avv
-        assert "se il titolo non indica la misura degli interessi" in avv
+        assert "Se il titolo indica il tasso, la clausola chiede gli interessi in quella misura dalla scadenza al " \
+               "saldo, senza il saggio dell'art. 1284 co. 4 c.c." in avv
         assert "R.D. 1669/1933" in r["riferimento_normativo"]
 
     def test_retribuzioni_interessi_e_rivalutazione_art_429(self):
