@@ -658,9 +658,9 @@ def decreto_ingiuntivo(
     differito e non è in vigore); art. 413 c.p.c. per i crediti di lavoro (sempre tribunale);
     DPR 115/2002 (CU monitorio, metà ex art. 13 co. 3; art. 9 co. 1-bis per i crediti di lavoro: CU dovuto solo se
     il reddito supera tre volte la soglia dell'art. 76; dichiarazione di valore ex art. 14 co. 2); artt. 636 e 637
-    co. 3 c.p.c. per la parcella con parere dell'Ordine. Verificata al 2026-09-29. Interessi: art. 1282 e 1284 co. 4
-    c.c. (credito ordinario); artt. 4 co. 1, 5 e 6 co. 2 D.Lgs. 231/2002 (credito commerciale); art. 642 co. 2
-    c.p.c. riletti il 2026-11-26.
+    co. 3 c.p.c. per la parcella con parere dell'Ordine. Verificata al 2026-09-29. Interessi: artt. 1282 e 1284
+    co. 4 c.c.; artt. 2, 4, 5 e 6 D.Lgs. 231/2002; art. 63 disp. att. c.c.; artt. 5, 33, 55 e 103 R.D. 1669/1933;
+    art. 429 co. 3 c.p.c. e art. 150 disp. att. c.p.c.; art. 642 co. 2 c.p.c. riletti il 2026-11-26.
     Precisione: INDICATIVO per la bozza (richiede completamento con dati specifici del caso).
     Chaining: → contributo_unificato() per calcolare le spese di giustizia → modello_notula(tipo_procedimento=
         'decreto_ingiuntivo') per il compenso del monitorio sulla sua tabella, fase unica (non parcella_avvocato_civile).
@@ -673,9 +673,11 @@ def decreto_ingiuntivo(
         tipo_credito: Natura del credito: 'ordinario', 'commerciale' (corrispettivo di una transazione commerciale
                       tra imprese ovvero tra imprese e pubbliche amministrazioni, D.Lgs. 231/2002: interessi moratori
                       dal giorno successivo alla scadenza, senza costituzione in mora, e importo forfettario di 40
-                      euro per fattura), 'professionale' (parcella
-                      vidimata), 'condominiale' (delibera assembleare), 'cambiale', 'retribuzioni' (crediti di
-                      lavoro: competenza del tribunale in funzione di giudice del lavoro)
+                      euro per fattura), 'professionale' (parcella vidimata; interessi come 'commerciale' se il
+                      cliente è un'impresa o una PA, altrimenti come 'ordinario': la bozza dà le due ipotesi),
+                      'condominiale' (delibera assembleare), 'cambiale' (interessi e spese dell'art. 55 legge
+                      cambiaria), 'retribuzioni' (crediti di lavoro: competenza del tribunale in funzione di giudice
+                      del lavoro; interessi legali e rivalutazione, art. 429 co. 3 c.p.c.)
         provvisoria_esecuzione: True per richiedere la clausola ex art. 642 c.p.c.
         reddito_oltre_soglia_lavoro: solo per 'retribuzioni' (art. 9 co. 1-bis DPR 115/2002): True se il reddito
                       imponibile del ricorrente supera tre volte la soglia dell'art. 76; altrimenti CU non dovuto
@@ -726,52 +728,57 @@ def decreto_ingiuntivo(
 
     # Interest clause by kind of credit
     avvertenze: list[str] = []
-    riferimenti_interessi = ""
+    separatore_spese = ", "  # before «oltre spese e competenze»; a newline after a list of alternatives
+    # Art. 4 co. 1 D.Lgs. 231/2002: late-payment interest runs from the day after the due date, with no
+    # formal demand; art. 5 co. 1: at the rate of the "interessi legali di mora"; art. 6 co. 2: a 40 euro
+    # lump sum, also with no formal demand, due for each late payment (CJEU C-78/22, operative part)
+    clausola_commerciale = (
+        "oltre interessi moratori nella misura degli interessi legali di mora (art. 5 D.Lgs. 231/2002), "
+        "dal giorno successivo alla scadenza del termine per il pagamento di ciascuna fattura "
+        "[indicare le scadenze] al saldo, senza che sia necessaria la costituzione in mora "
+        "(art. 4 co. 1 D.Lgs. 231/2002), e l'importo forfettario di Euro 40,00 per ciascuna fattura "
+        "non pagata alla scadenza [indicare il totale], a titolo di risarcimento per i costi di recupero "
+        "(art. 6 co. 2 D.Lgs. 231/2002)"
+    )
+    avvertenze_231 = [
+        "Importo forfettario: spetta senza che sia necessaria la costituzione in mora; è fatta salva la prova "
+        "del maggior danno, che può comprendere i costi di assistenza per il recupero del credito (art. 6 "
+        "co. 2 D.Lgs. 231/2002). Se uno stesso contratto prevede pagamenti periodici, l'importo è dovuto per "
+        "ciascun ritardo di pagamento (Corte di giustizia UE, 4 maggio 2023, C-78/22)",
+        "Tasso concordato: nelle transazioni commerciali tra imprese le parti possono concordare un tasso di "
+        "interesse diverso, nei limiti dell'art. 7 (art. 5 co. 1 D.Lgs. 231/2002); se è stato concordato, "
+        "nella clausola sostituisce gli interessi legali di mora [indicare il tasso e la clausola del "
+        "contratto]. La facoltà non riguarda le transazioni con una pubblica amministrazione; interessi_mora "
+        "calcola solo gli interessi legali di mora",
+        "Transazioni anteriori al 2013: il testo vigente del D.Lgs. 231/2002, importo forfettario compreso, "
+        "si applica alle transazioni commerciali concluse dal 1° gennaio 2013 (art. 3 co. 1 D.Lgs. 192/2012); "
+        "per le anteriori interessi_mora applica la maggiorazione di sette punti (contratto_ante_2013) e "
+        "l'importo forfettario va tolto dalla clausola",
+    ]
+    # Art. 1284 co. 4 c.c.: from the claim, the rate of the late-payment law, if the parties did not fix
+    # the rate (version B, chosen by the owner for the ordinary credit, LI-101)
+    saggio_dalla_domanda = (
+        "al saggio previsto dalla legislazione speciale relativa ai ritardi di pagamento nelle transazioni "
+        "commerciali (art. 1284 co. 4 c.c.)"
+    )
+    # Art. 1282 co. 1 c.c.: a liquid and due money credit bears interest by operation of law, with no
+    # formal demand
+    clausola_ordinaria = (
+        "oltre interessi al saggio legale dal [data in cui il credito è divenuto liquido ed esigibile] "
+        f"alla domanda (art. 1282 c.c.) e, dalla domanda al saldo, {saggio_dalla_domanda}"
+    )
+    nota_1284_co_4 = "il saggio dell'art. 1284 co. 4 c.c. vale se le parti non hanno determinato la misura degli interessi"
     if tipo_credito == "commerciale":
-        # Art. 4 co. 1 D.Lgs. 231/2002: late-payment interest runs from the day after the due date, with no
-        # formal demand; art. 5 co. 1: at the rate of the "interessi legali di mora"; art. 6 co. 2: a 40 euro
-        # lump sum, also with no formal demand, due for each late payment (CJEU C-78/22, operative part)
-        clausola_interessi = (
-            "oltre interessi moratori nella misura degli interessi legali di mora (art. 5 D.Lgs. 231/2002), "
-            "dal giorno successivo alla scadenza del termine per il pagamento di ciascuna fattura "
-            "[indicare le scadenze] al saldo, senza che sia necessaria la costituzione in mora "
-            "(art. 4 co. 1 D.Lgs. 231/2002), e l'importo forfettario di Euro 40,00 per ciascuna fattura "
-            "non pagata alla scadenza [indicare il totale], a titolo di risarcimento per i costi di recupero "
-            "(art. 6 co. 2 D.Lgs. 231/2002)"
-        )
+        clausola_interessi = clausola_commerciale
         riferimenti_interessi = "; artt. 4, 5 e 6 D.Lgs. 231/2002 (interessi moratori e importo forfettario)"
         avvertenze.append(
             "Credito commerciale: il modello decreto_ingiuntivo_fatture (genera_modello_atto) aggiunge l'elenco "
             "delle fatture; gli interessi di mora di ciascuna fattura si calcolano con interessi_mora "
             "(data_inizio = scadenza della fattura)"
         )
-        avvertenze.append(
-            "Importo forfettario: spetta senza che sia necessaria la costituzione in mora; è fatta salva la prova "
-            "del maggior danno, che può comprendere i costi di assistenza per il recupero del credito (art. 6 "
-            "co. 2 D.Lgs. 231/2002). Se uno stesso contratto prevede pagamenti periodici, l'importo è dovuto per "
-            "ciascun ritardo di pagamento (Corte di giustizia UE, 4 maggio 2023, C-78/22)"
-        )
-        avvertenze.append(
-            "Tasso concordato: nelle transazioni commerciali tra imprese le parti possono concordare un tasso di "
-            "interesse diverso, nei limiti dell'art. 7 (art. 5 co. 1 D.Lgs. 231/2002); se è stato concordato, "
-            "nella clausola sostituisce gli interessi legali di mora [indicare il tasso e la clausola del "
-            "contratto]. La facoltà non riguarda le transazioni con una pubblica amministrazione; interessi_mora "
-            "calcola solo gli interessi legali di mora"
-        )
-        avvertenze.append(
-            "Transazioni anteriori al 2013: il testo vigente del D.Lgs. 231/2002, importo forfettario compreso, "
-            "si applica alle transazioni commerciali concluse dal 1° gennaio 2013 (art. 3 co. 1 D.Lgs. 192/2012); "
-            "per le anteriori interessi_mora applica la maggiorazione di sette punti (contratto_ante_2013) e "
-            "l'importo forfettario va tolto dalla clausola"
-        )
+        avvertenze.extend(avvertenze_231)
     elif tipo_credito == "ordinario":
-        # Art. 1282 co. 1 c.c.: a liquid and due money credit bears interest by operation of law, with no
-        # formal demand; art. 1284 co. 4 c.c.: from the claim, the rate of D.Lgs. 231/2002
-        clausola_interessi = (
-            "oltre interessi al saggio legale dal [data in cui il credito è divenuto liquido ed esigibile] "
-            "alla domanda (art. 1282 c.c.) e, dalla domanda al saldo, al saggio previsto dalla legislazione "
-            "speciale relativa ai ritardi di pagamento nelle transazioni commerciali (art. 1284 co. 4 c.c.)"
-        )
+        clausola_interessi = clausola_ordinaria
         riferimenti_interessi = "; artt. 1282 e 1284 co. 4 c.c. (interessi)"
         avvertenze.append(
             "Interessi: i crediti liquidi ed esigibili di somme di danaro producono interessi di pieno diritto, "
@@ -779,8 +786,84 @@ def decreto_ingiuntivo(
             "e pigioni, salvo patto contrario, solo dalla costituzione in mora (art. 1282 co. 2 c.c.). Il saggio "
             "dell'art. 1284 co. 4 c.c. vale se le parti non hanno determinato la misura degli interessi"
         )
-    else:
-        clausola_interessi = "oltre interessi legali dalla messa in mora al saldo"
+    elif tipo_credito == "professionale":
+        # Art. 2 co. 1 lett. a and c D.Lgs. 231/2002: a professional is an "imprenditore", so the fee owed by a
+        # business or a public administration is the price of a commercial transaction; any other client
+        # owes interest under art. 1282 c.c. The tool does not know the client: the draft gives both
+        clausola_interessi = (
+            "[mantenere l'ipotesi che ricorre]\n- (a) se il cliente è un'impresa o una pubblica amministrazione: "
+            f"{clausola_commerciale};\n- (b) altrimenti: {clausola_ordinaria};"
+        )
+        separatore_spese = "\n"
+        riferimenti_interessi = (
+            "; artt. 2, 4, 5 e 6 D.Lgs. 231/2002 (cliente impresa o pubblica amministrazione); "
+            "artt. 1282 e 1284 co. 4 c.c. (altro cliente)"
+        )
+        avvertenze.append(
+            "Credito professionale: la prestazione resa a un'impresa o a una pubblica amministrazione è una "
+            "transazione commerciale, perché è imprenditore anche chi esercita una libera professione (art. 2 "
+            "co. 1 lett. a e c D.Lgs. 231/2002): ipotesi (a); salvo i commi 3-5, il periodo di pagamento non può "
+            "superare trenta giorni dal ricevimento della fattura o di una richiesta di pagamento di contenuto "
+            "equivalente (art. 4 co. 2 lett. a). Verso un altro cliente, ipotesi (b): gli interessi decorrono "
+            "dal giorno in cui il credito è divenuto liquido ed esigibile (art. 1282 co. 1 c.c.), da verificare "
+            "se il compenso non era pattuito e si determina con la parcella e il parere della competente "
+            f"associazione professionale (art. 636 c.p.c.); {nota_1284_co_4}"
+        )
+        avvertenze.extend(avvertenze_231)
+    elif tipo_credito == "condominiale":
+        # Art. 63 co. 1 disp. att. c.c.: contributions owed under the apportionment approved by the meeting;
+        # once due they are liquid and bear interest by operation of law (art. 1282 co. 1 c.c.)
+        clausola_interessi = (
+            "oltre interessi al saggio legale dalla scadenza di ciascuna rata dei contributi dovuti in base allo "
+            "stato di ripartizione approvato dall'assemblea [indicare delibere e scadenze] alla domanda "
+            f"(art. 1282 c.c.) e, dalla domanda al saldo, {saggio_dalla_domanda}"
+        )
+        riferimenti_interessi = "; art. 63 disp. att. c.c. e artt. 1282 e 1284 co. 4 c.c. (interessi)"
+        avvertenze.append(
+            "Contributi condominiali: l'amministratore li riscuote in base allo stato di ripartizione approvato "
+            "dall'assemblea (art. 63 co. 1 disp. att. c.c.); liquidi ed esigibili alla scadenza di ciascuna rata, "
+            "producono interessi di pieno diritto (art. 1282 co. 1 c.c.). Se il regolamento di condominio prevede "
+            f"interessi di mora, indicarne la misura in luogo del saggio legale; {nota_1284_co_4}"
+        )
+    elif tipo_credito == "cambiale":
+        # Art. 55 nn. 2-3 R.D. 1669/1933 (legge cambiaria), claimed also in the direct action against the
+        # acceptor (art. 33 co. 2) and the maker of a promissory note (art. 103): interest from maturity at
+        # the rate stated in the bill under art. 5 or, failing that, at the legal rate; protest and other costs
+        clausola_interessi = (
+            "oltre interessi dalla scadenza del titolo [indicare] al saldo, nella misura indicata nel titolo o, "
+            "in mancanza, al tasso legale (art. 55 n. 2 R.D. 1669/1933) e, dalla domanda, "
+            f"{saggio_dalla_domanda}, e le spese per il protesto, per gli avvisi dati e le altre spese "
+            "(art. 55 n. 3 R.D. 1669/1933)"
+        )
+        riferimenti_interessi = "; artt. 5, 33, 55 e 103 R.D. 1669/1933 e art. 1284 co. 4 c.c. (interessi e spese)"
+        avvertenze.append(
+            "Cambiale: con l'azione diretta contro l'accettante (art. 33 co. 2 R.D. 1669/1933), o l'emittente del "
+            "vaglia cambiario (art. 103), e con quella di regresso si chiedono gli interessi dalla scadenza nella "
+            "misura indicata nel titolo a norma dell'art. 5 o, in mancanza, al tasso legale, e le spese per il "
+            "protesto, per gli avvisi dati e le altre spese (art. 55). Il tasso d'interesse va indicato nella "
+            "cambiale, e la promessa d'interessi vale solo nella cambiale pagabile a vista o a certo tempo vista "
+            "(art. 5); il saggio dell'art. 1284 co. 4 c.c. vale se il titolo non indica la misura degli interessi"
+        )
+    else:  # retribuzioni
+        # Art. 429 co. 3 c.p.c.: for labour credits, legal interest and the greater loss from the fall in value
+        # of the credit, from the day the right accrued; art. 150 disp. att. c.p.c.: the ISTAT index. For public
+        # employees interest and revaluation do not add up (art. 16 co. 6 L. 412/1991, extended by art. 22
+        # co. 36 L. 724/1994; the words "e privati" struck down by Corte cost. n. 459/2000)
+        clausola_interessi = (
+            "oltre interessi nella misura legale e il maggior danno per la diminuzione di valore del credito "
+            "(rivalutazione monetaria), dal giorno della maturazione di ciascun credito [indicare] al saldo "
+            "(art. 429 co. 3 c.p.c.; art. 150 disp. att. c.p.c.)"
+        )
+        riferimenti_interessi = "; art. 429 co. 3 c.p.c. e art. 150 disp. att. c.p.c. (interessi e rivalutazione)"
+        avvertenze.append(
+            "Crediti di lavoro: il giudice determina, oltre gli interessi nella misura legale, il maggior danno "
+            "subito dal lavoratore per la diminuzione di valore del suo credito, con decorrenza dal giorno della "
+            "maturazione del diritto (art. 429 co. 3 c.p.c.; indice ISTAT dell'art. 150 disp. att. c.p.c.). Per i "
+            "dipendenti pubblici, per gli emolumenti il cui diritto non era maturato entro il 23 dicembre 1994, "
+            "l'importo dovuto a titolo di interesse è portato in detrazione dalle somme spettanti a ristoro del "
+            "maggior danno (art. 16 co. 6 L. 412/1991, esteso dall'art. 22 co. 36 L. 724/1994; per i dipendenti "
+            "privati la norma è stata dichiarata illegittima da Corte cost. n. 459/2000): adattare la clausola"
+        )
 
     bozza = f"""RICORSO PER DECRETO INGIUNTIVO
 (Artt. 633 e ss. c.p.c.)
@@ -805,7 +888,7 @@ Che il credito è certo, liquido ed esigibile, come risulta dalla prova scritta 
 
 CHIEDE
 
-che l'Ill.mo {giudice} voglia emettere decreto con il quale si ingiunge a {debitore} di pagare la somma di Euro {_eur_it(importo)}, {clausola_interessi}, oltre spese e competenze del procedimento.
+che l'Ill.mo {giudice} voglia emettere decreto con il quale si ingiunge a {debitore} di pagare la somma di Euro {_eur_it(importo)}, {clausola_interessi}{separatore_spese}oltre spese e competenze del procedimento.
 
 Ai fini del contributo unificato si dichiara che il valore della controversia è di Euro {_eur_it(importo)} (art. 14 co. 2 DPR 115/2002) e che il contributo dovuto è di Euro {_eur_it(cu)}."""
 
