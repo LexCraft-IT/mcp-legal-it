@@ -1124,8 +1124,23 @@ described in those sections, not repeated here. Upgrading from 2.x:
   - **Provisional enforcement.** For an ordinary, commercial or labour credit the draft gives both
     grounds of art. 642 co. 2 c.p.c., the danger of serious prejudice or documentation signed by the
     debtor proving the right, one per line, and asks to keep the one that applies (before, only the
-    danger). Professional, condominium and bill-of-exchange credits keep their grounds; the interest
-    clause changes only for the ordinary and commercial credit.
+    danger). Professional, condominium and bill-of-exchange credits keep their grounds.
+  - **The other kinds of credit, each from its own rules (LI-101).** No kind asks any more for
+    interest «dalla messa in mora». Norms read on 2026-11-26; the legge cambiaria, in the annex of
+    R.D. 1669/1933, through `fetch_law_article`, since `cite_law` does not reach it.
+    - Professional: the tool does not know the client, so the draft gives two alternatives. For a
+      business or public administration client, the commercial clause: a professional is an
+      «imprenditore» (D.Lgs. 231/2002, art. 2 co. 1 lett. a and c). For any other client, the
+      ordinary clause.
+    - Condominium: interest from each instalment of the contributions due under the approved
+      apportionment (art. 63 disp. att. c.c., art. 1282 c.c.), and from the claim at the co. 4 rate.
+    - Bill of exchange: interest at the legal rate from maturity until the claim, then at the co. 4
+      rate, plus protest and other costs (art. 55 R.D. 1669/1933, also in the direct action, artt. 33
+      and 103). A rate stated in the bill replaces both until payment (warning).
+    - Labour credit: legal interest and the greater loss from the fall in value, from the day each
+      credit accrued (art. 429 co. 3 c.p.c., art. 150 disp. att. c.p.c.). A warning says that for
+      public employees interest is deducted from the revaluation (art. 16 co. 6 L. 412/1991 and
+      art. 22 co. 36 L. 724/1994; Corte cost. 459/2000 for private employees).
   - **#202, warning only.** `interessi_acconti` and the `atto_di_precetto` model say that it applies the
     legal rate of art. 1284 co. 1 c.c. only, and name `interessi_corso_causa` for the co. 4 rate, which
     takes no part payments. A rate choice on `interessi_acconti` is left to a later release.

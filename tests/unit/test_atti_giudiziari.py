@@ -578,12 +578,83 @@ class TestDecretoIngiuntivo:
         assert "art. 1282 co. 2 c.c." in avv and "fitti e pigioni" in avv  # rents: only from the demand
         assert "non hanno determinato la misura" in avv  # art. 1284 co. 4 applies only then
 
-    def test_altri_tipi_clausola_invariata(self):
-        # Only the ordinary and commercial clauses were reviewed (#203); the other kinds keep theirs
-        for tipo in ("professionale", "condominiale", "cambiale", "retribuzioni"):
+    # --- other kinds of credit, each from its own rules (LI-101); norms read 2026-11-26 ---
+
+    def test_nessun_tipo_chiede_interessi_dalla_messa_in_mora(self):
+        for tipo in ("ordinario", "commerciale", "professionale", "condominiale", "cambiale", "retribuzioni"):
             r = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=5000, tipo_credito=tipo)
-            assert "oltre interessi legali dalla messa in mora al saldo" in r["bozza_ricorso"], tipo
-            assert r["avvertenze"] == [], tipo
+            assert "dalla messa in mora" not in r["bozza_ricorso"], tipo
+            assert r["avvertenze"], tipo
+
+    def test_professionale_due_ipotesi_secondo_il_cliente(self):
+        # Art. 2 co. 1 lett. a and c D.Lgs. 231/2002: «"imprenditore": ogni soggetto esercente un'attività
+        # economica organizzata o una libera professione»; any other client: art. 1282 c.c.
+        r = _call("decreto_ingiuntivo", creditore="Avv. A", debitore="B S.r.l.", importo=5000,
+                  tipo_credito="professionale")
+        bozza = r["bozza_ricorso"]
+        assert "Euro 5.000,00, [mantenere l'ipotesi che ricorre]\n" in bozza
+        assert "\n- (a) se il cliente è un'impresa o una pubblica amministrazione: oltre interessi moratori" in bozza
+        assert "(art. 6 co. 2 D.Lgs. 231/2002),\n- (b) altrimenti: oltre interessi al saggio legale" in bozza
+        assert "(art. 1284 co. 4 c.c.),\noltre spese e competenze del procedimento." in bozza
+        avv = " ".join(r["avvertenze"])
+        assert "imprenditore anche chi esercita una libera professione (art. 2 co. 1 lett. a e c" in avv
+        assert "trenta giorni dal ricevimento della fattura" in avv and "(art. 636 c.p.c.)" in avv
+        assert "Tasso concordato" in avv and "Importo forfettario" in avv  # D.Lgs. 231/2002 warnings
+        assert "D.Lgs. 231/2002" in r["riferimento_normativo"] and "1282" in r["riferimento_normativo"]
+        # the art. 636 provisional-enforcement ground is unchanged
+        pe = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=5000, tipo_credito="professionale",
+                   provvisoria_esecuzione=True)
+        assert "art. 636 c.p.c." in pe["riepilogo"]["motivi_pe"][0]
+
+    def test_condominiale_contributi_da_stato_di_ripartizione(self):
+        # Art. 63 co. 1 disp. att. c.c.: «Per la riscossione dei contributi in base allo stato di ripartizione
+        # approvato dall'assemblea...»; art. 1282 co. 1 c.c. from each instalment's due date
+        r = _call("decreto_ingiuntivo", creditore="Condominio X", debitore="B", importo=3000,
+                  tipo_credito="condominiale")
+        bozza = r["bozza_ricorso"]
+        assert ("oltre interessi al saggio legale dalla scadenza di ciascuna rata dei contributi dovuti in base "
+                "allo stato di ripartizione approvato dall'assemblea [indicare delibere e scadenze] alla domanda "
+                "(art. 1282 c.c.) e, dalla domanda al saldo,") in bozza
+        assert "(art. 1284 co. 4 c.c.), oltre spese" in bozza
+        avv = " ".join(r["avvertenze"])
+        assert "regolamento di condominio" in avv and "non hanno determinato la misura" in avv
+        assert "art. 63 disp. att. c.c." in r["riferimento_normativo"]
+
+    def test_cambiale_interessi_e_spese_art_55(self):
+        # Art. 55 R.D. 1669/1933: «2° gli interessi dalla scadenza in misura uguale a quella indicata nel titolo
+        # a norma dell'art. 5 o, in mancanza, al tasso legale; 3° le spese per il protesto, per gli avvisi dati
+        # e le altre spese»; art. 33 co. 2: the direct action covers what arts. 55 and 56 allow
+        r = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=2000, tipo_credito="cambiale")
+        bozza = r["bozza_ricorso"]
+        # two consecutive periods, never two rates at once: legal rate until the claim, then art. 1284 co. 4
+        assert ("oltre interessi al tasso legale dalla scadenza del titolo [indicare] alla domanda (art. 55 n. 2 "
+                "R.D. 1669/1933) e, dalla domanda al saldo, al saggio previsto dalla legislazione speciale") in bozza
+        assert "al saldo, nella misura" not in bozza
+        assert ("e le spese per il protesto, per gli avvisi dati e le altre spese (art. 55 n. 3 R.D. 1669/1933), "
+                "oltre spese") in bozza
+        avv = " ".join(r["avvertenze"])
+        assert "art. 33 co. 2" in avv and "art. 103" in avv
+        assert "pagabile a vista o a certo tempo vista" in avv
+        assert "Se il titolo indica il tasso, la clausola chiede gli interessi in quella misura dalla scadenza al " \
+               "saldo, senza il saggio dell'art. 1284 co. 4 c.c." in avv
+        assert "R.D. 1669/1933" in r["riferimento_normativo"]
+
+    def test_retribuzioni_interessi_e_rivalutazione_art_429(self):
+        # Art. 429 co. 3 c.p.c.: «oltre gli interessi nella misura legale, il maggior danno eventualmente subito
+        # dal lavoratore per la diminuzione di valore del suo credito ... dal giorno della maturazione del diritto»
+        r = _call("decreto_ingiuntivo", creditore="A", debitore="B S.p.A.", importo=8000,
+                  tipo_credito="retribuzioni")
+        bozza = r["bozza_ricorso"]
+        assert ("oltre interessi nella misura legale e il maggior danno per la diminuzione di valore del credito "
+                "(rivalutazione monetaria), dal giorno della maturazione di ciascun credito [indicare] al saldo "
+                "(art. 429 co. 3 c.p.c.; art. 150 disp. att. c.p.c.)") in bozza
+        assert "1284 co. 4" not in bozza  # labour credits: art. 429 only (version A)
+        avv = " ".join(r["avvertenze"])
+        # public employees: no cumulation (art. 16 co. 6 L. 412/1991 via art. 22 co. 36 L. 724/1994;
+        # «e privati» struck down by Corte cost. 459/2000, per the Normattiva note)
+        assert "portato in detrazione" in avv and "art. 22 co. 36 L. 724/1994" in avv
+        assert "Corte cost. n. 459/2000" in avv and "23 dicembre 1994" in avv
+        assert "art. 429 co. 3 c.p.c." in r["riferimento_normativo"]
 
     def test_provvisoria_esecuzione_ordinario_due_motivi_art_642_co_2(self):
         # Art. 642 co. 2 c.p.c. (read 2026-11-26): danger of serious prejudice, «ovvero» documentation

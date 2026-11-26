@@ -2,7 +2,7 @@
   "_vintage": {
     "fonte": "modelli redazionali interni, non una fonte normativa",
     "verifica": "manuale",
-    "nota": "riferimenti normativi e avvertenze riletti il 2026-09-29 sul testo vigente (Normattiva): norme PCT ex D.Lgs. 149/2022 (artt. 196-octies ss. disp. att. c.p.c.), art. 475 c.p.c., art. 347 c.p.c. come modificato dal D.Lgs. 164/2024; artt. 480-481 c.p.c. (atto di precetto) e art. 4 co. 1 D.Lgs. 231/2002 riletti il 2026-11-22; art. 642 c.p.c., artt. 1282 e 1284 c.c. e artt. 2, 4 e 5 D.Lgs. 231/2002 riletti il 2026-11-26"
+    "nota": "riferimenti normativi e avvertenze riletti il 2026-09-29 sul testo vigente (Normattiva): norme PCT ex D.Lgs. 149/2022 (artt. 196-octies ss. disp. att. c.p.c.), art. 475 c.p.c., art. 347 c.p.c. come modificato dal D.Lgs. 164/2024; artt. 480-481 c.p.c. (atto di precetto) e art. 4 co. 1 D.Lgs. 231/2002 riletti il 2026-11-22; art. 642 c.p.c., artt. 1282 e 1284 c.c., artt. 2-7 D.Lgs. 231/2002, art. 63 disp. att. c.c., artt. 5, 33, 55 e 103 R.D. 1669/1933, art. 429 c.p.c., art. 150 disp. att. c.p.c., art. 16 L. 412/1991 e art. 22 L. 724/1994 riletti il 2026-11-26"
   },
   "decreto_ingiuntivo_ordinario": {
     "categoria": "atti_introduttivi",
@@ -23,7 +23,7 @@
     "campi_obbligatori": ["creditore", "debitore", "importo"],
     "campi_opzionali": ["provvisoria_esecuzione"],
     "tool_calcolo": ["contributo_unificato", "modello_notula"],
-    "riferimenti_normativi": ["artt. 633-656 c.p.c.", "art. 636 c.p.c."],
+    "riferimenti_normativi": ["artt. 633-656 c.p.c.", "art. 636 c.p.c.", "artt. 2, 4, 5 e 6 D.Lgs. 231/2002", "artt. 1282 e 1284 co. 4 c.c."],
     "avvertenze": ["La parcella va sottoscritta dal ricorrente e corredata dal parere della competente associazione professionale (art. 636 c.p.c.), che vale come prova del credito; il parere non occorre se il compenso è determinato in base a tariffe obbligatorie; non serve per la provvisoria esecuzione", "Notificare il decreto entro 60 giorni dalla pronuncia (90 se all'estero), altrimenti perde efficacia (art. 644 c.p.c.)", "Compenso del monitorio sulla sua tabella del D.M. 55/2014, fase unica: modello_notula(tipo_procedimento='decreto_ingiuntivo'), non le fasi di cognizione di parcella_avvocato_civile; come compenso usare totale_onorari: totale_notula comprende già contributo unificato e anticipazione forfettaria, da non sommare due volte"]
   },
   "decreto_ingiuntivo_condominiale": {
@@ -34,7 +34,7 @@
     "campi_obbligatori": ["creditore", "debitore", "importo"],
     "campi_opzionali": ["provvisoria_esecuzione"],
     "tool_calcolo": ["contributo_unificato"],
-    "riferimenti_normativi": ["artt. 633-656 c.p.c.", "art. 63 disp. att. c.c."],
+    "riferimenti_normativi": ["artt. 633-656 c.p.c.", "art. 63 disp. att. c.c.", "artt. 1282 e 1284 co. 4 c.c."],
     "avvertenze": ["Allegare delibera assembleare di approvazione spese", "Notificare il decreto entro 60 giorni dalla pronuncia (90 se all'estero), altrimenti perde efficacia (art. 644 c.p.c.)"]
   },
   "decreto_ingiuntivo_cambiale": {
@@ -45,7 +45,7 @@
     "campi_obbligatori": ["creditore", "debitore", "importo"],
     "campi_opzionali": ["provvisoria_esecuzione"],
     "tool_calcolo": ["contributo_unificato"],
-    "riferimenti_normativi": ["artt. 633-656 c.p.c.", "R.D. 1669/1933"],
+    "riferimenti_normativi": ["artt. 633-656 c.p.c.", "artt. 5, 33, 55 e 103 R.D. 1669/1933", "art. 1284 co. 4 c.c."],
     "avvertenze": ["Allegare cambiale in originale", "Notificare il decreto entro 60 giorni dalla pronuncia (90 se all'estero), altrimenti perde efficacia (art. 644 c.p.c.)"]
   },
   "decreto_ingiuntivo_fatture": {
@@ -67,7 +67,7 @@
     "campi_obbligatori": ["creditore", "debitore", "importo"],
     "campi_opzionali": ["provvisoria_esecuzione"],
     "tool_calcolo": ["contributo_unificato"],
-    "riferimenti_normativi": ["artt. 633-656 c.p.c.", "art. 409 c.p.c.", "art. 442 c.p.c."],
+    "riferimenti_normativi": ["artt. 633-656 c.p.c.", "art. 409 c.p.c.", "art. 442 c.p.c.", "art. 429 co. 3 c.p.c.", "art. 150 disp. att. c.p.c."],
     "avvertenze": ["Competenza: sezione lavoro del Tribunale", "CU esente nelle cause di lavoro per la parte con reddito fino a tre volte la soglia dell'art. 76 DPR 115/2002 (art. 9 co. 1-bis); oltre, metà scaglione", "Notificare il decreto entro 60 giorni dalla pronuncia (90 se all'estero), altrimenti perde efficacia (art. 644 c.p.c.)"]
   },
   "atto_di_precetto": {
