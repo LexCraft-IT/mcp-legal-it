@@ -15,6 +15,20 @@ described in those sections, not repeated here. Upgrading from 2.x:
 [`docs/migration/2.x-to-3.0.md`](docs/migration/2.x-to-3.0.md).
 
 ### Added
+- **Daily new-version notice in the `.mcpb` (LI-096).** Who installs the Claude Desktop extension
+  by hand now learns when a newer stable release is out. With `LEGAL_UPDATE_CHECK=on` the server
+  asks GitHub (`api.github.com`, `releases/latest`) at most once a day, with a generic User-Agent
+  and nothing about the user or their queries, and when the running version is older (a
+  `3.0.0-beta.5` is older than `3.0.0`) it says so, in Italian with a link to the release page, in
+  the server instructions and on stderr, never in a tool answer (LI-045). Startup waits at most 2
+  seconds for the check; a check that does not answer in time finishes in the background for the
+  next start. A network failure, a timeout, a rate limit or a bad payload produce no notice and no
+  message. The day and the result live in `MCP_CACHE_DIR/update_check.json` (declared in
+  `docs/cache-inventory.md`); with `LEGAL_CACHE=off` nothing is written and the check runs once per
+  start. Off by default: only `dxt/manifest.json` turns it on, through the `user_config` boolean
+  «Avviso di nuova versione» (default true) that a Claude Desktop user switches off in the
+  extension settings. `api.github.com` joins the allowlist (`_egress.py`, `SECURITY.md`) and the
+  privacy notice describes the connection.
 - **Sigle and nicknames of testi unici and laws, second pass (G-440).** «TUED» / «T.U.E.D.» (testo
   unico edilizia, so «art. 36-bis TUED» reads), «TUEs» / «TUEspr» (espropri), «TUSG» and «T.U. spese
   di giustizia» (d.P.R. 115/2002), «TUDA» (d.P.R. 445/2000), «T.U. accise» (d.lgs. 504/1995), «TULD»
@@ -1039,6 +1053,14 @@ described in those sections, not repeated here. Upgrading from 2.x:
   server runs without the disk cache.
 
 ### Fixed
+- **Interest periods start on the first day of interest (#201, LI-099).** `interessi_legali`,
+  `interessi_mora`, `interessi_acconti` and `interessi_corso_causa` count from the day after the date
+  passed in (dies a quo non computatur), but their first period showed that date as `dal`: «dal
+  2026-04-12 al 2026-06-30, giorni 79», where the 79 days run from 13 April. A draft that copied `dal`
+  stated a start one day early. Every period now begins on its first day of interest: the day after
+  `data_inizio`, after each part payment in `interessi_acconti`, after the claim and after the
+  judgment in `interessi_corso_causa`, so the periods follow one another without overlapping.
+  **No amount changed**; the golden reference moves only in `dal`.
 - **Act models and two calculators: seven findings of a drafting trial (#195).** Each norm was read on
   the text in force on Normattiva on 2026-11-22.
   - **Tier 3 routes named resources that do not exist.** 34 models pointed to

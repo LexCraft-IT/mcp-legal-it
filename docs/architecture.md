@@ -45,6 +45,13 @@ Con `MCP_TRANSPORT=http` l'endpoint Streamable HTTP è `MCP_PATH` (default
 (`run_server.py` è un guscio che vi delega), che è anche l'entry point
 `mcp-legal-it` della wheel.
 
+Prima di `mcp.run`, `cli.main` (e `python -m mcp_legal_it`) passa da
+`mcp_legal_it/_update_check.py`: con `LEGAL_UPDATE_CHECK=on`, che accende il manifest
+del `.mcpb` (altrove va attivato espressamente), al più una volta al giorno chiede a `api.github.com` l'ultima
+release stabile e, se è più recente, lo aggiunge alle istruzioni del server e lo
+scrive su stderr, mai nelle risposte dei tool (LI-045, LI-096). L'avvio aspetta al
+massimo 2 secondi; un errore di rete non produce né avviso né messaggi.
+
 ### `mcp_legal_it/server.py` — FastMCP init
 
 Costruisce l'istanza `mcp` e registra tutti i moduli:

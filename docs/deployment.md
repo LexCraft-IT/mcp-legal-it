@@ -261,6 +261,7 @@ curl -s -X POST http://localhost:8000/mcp -H 'Content-Type: application/json' \
 | `LEGAL_CACHE` | *(attiva)* | `off` (anche `no`, `false`, `0`, `none`, `disabled`): nessuna lettura o scrittura su disco, cache solo in memoria per la vita del processo |
 | `LEGAL_TODAY` / `LEGAL_NOW` | *(orologio reale)* | Pinnano la data/ora vista dal server (`YYYY-MM-DD` / ISO 8601): riproducibilità dei calcoli «a oggi», usati dai golden test |
 | `LEGAL_REFUSAL_LEDGER` | *(spento)* | `on`: verbale JSONL dei rifiuti/accettazioni della policy di precisione in `MCP_CACHE_DIR/refusals.jsonl` (solo tool, tabelle, stati, timestamp) |
+| `LEGAL_UPDATE_CHECK` | *(spento)* | `on` (anche `1`, `true`, `yes`): al più una volta al giorno chiede a `api.github.com` l'ultima versione stabile e, se è più recente di quella in uso, lo segnala nelle istruzioni del server e su stderr, mai nelle risposte dei tool. Lo accende il `.mcpb` (opzione «Avviso di nuova versione» nelle impostazioni dell'estensione, attiva per default); le altre installazioni controllano solo se lo si attiva espressamente; esito del controllo in `MCP_CACHE_DIR/update_check.json`, niente su disco con `LEGAL_CACHE=off`. Qualunque altro valore vale come spento |
 | `AKN_CACHE_MAX_ACTS` | `50` | Atti Normattiva (AKN) tenuti in memoria |
 | `AKN_DISABLED` | *(spento)* | `1`: salta l'export Akoma Ntoso di Normattiva e usa il fallback HTML |
 

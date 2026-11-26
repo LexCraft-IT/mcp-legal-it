@@ -9,6 +9,8 @@ Three clients persist state under `${MCP_CACHE_DIR:-~/.cache/mcp-legal-it}`:
     normattiva_aggiornamenti/<sha256>.json            a past version's window and update table, 90 days
     brocardi_urls.json                                article URL map
     corte_cost/{kind}/{year}.json                     Consulta massime, 7-day TTL
+    update_check.json                                 day and result of the new-version
+                                                      check (LEGAL_UPDATE_CHECK, .mcpb only)
 
 Everything else the server keeps between calls is in memory only (the LRU in
 `visualex.akn_fetch`, the URL dictionaries, `lru_cache` over the bundled JSON

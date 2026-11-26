@@ -21,6 +21,7 @@ when a declared cache stops honouring the `LEGAL_CACHE=off` switch.
 | `${MCP_CACHE_DIR:-~/.cache/mcp-legal-it}` | `brocardi_urls.json -- article URL map` | no TTL; an entry is dropped when the article 404s | `mcp_legal_it/lib/brocardi/client.py` | `cache_enabled()` |
 | `${MCP_CACHE_DIR:-~/.cache/mcp-legal-it}/corte_cost` | `{kind}/{year}.json -- Consulta pronunce and massime` | 7 days (_CACHE_TTL_SECONDS) | `mcp_legal_it/lib/corte_cost/client.py` | `cache_enabled()` |
 | `${MCP_CACHE_DIR:-~/.cache/mcp-legal-it}` | `dpa_probe.json -- supplier DPA determinations, keyed by domain` | 90 days (TTL_GIORNI); transient failures are never written | `mcp_legal_it/lib/dpa_probe/cache.py` | `cache_enabled()` |
+| `${MCP_CACHE_DIR:-~/.cache/mcp-legal-it}` | `update_check.json -- day of the last new-version check and the latest stable release it found (LEGAL_UPDATE_CHECK, .mcpb only; no tool reaches it)` | one entry, rewritten by the day's first start; read once per start | `mcp_legal_it/_update_check.py` | `cache_enabled()` |
 | `${MCP_CACHE_DIR:-~/.cache/mcp-legal-it}` | `refusals.jsonl -- refusal/acceptance tally per day, opt-in (LEGAL_REFUSAL_LEDGER)` | append-only; the host trims or resets it whenever it wants | `mcp_legal_it/lib/_refusals.py` | `ledger_enabled()` |
 
 ## Tools that can write them
