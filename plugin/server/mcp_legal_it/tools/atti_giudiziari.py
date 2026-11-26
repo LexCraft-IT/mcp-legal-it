@@ -658,23 +658,28 @@ def decreto_ingiuntivo(
     differito e non è in vigore); art. 413 c.p.c. per i crediti di lavoro (sempre tribunale);
     DPR 115/2002 (CU monitorio, metà ex art. 13 co. 3; art. 9 co. 1-bis per i crediti di lavoro: CU dovuto solo se
     il reddito supera tre volte la soglia dell'art. 76; dichiarazione di valore ex art. 14 co. 2); artt. 636 e 637
-    co. 3 c.p.c. per la parcella con parere dell'Ordine. Verificata al 2026-09-29.
+    co. 3 c.p.c. per la parcella con parere dell'Ordine. Verificata al 2026-09-29. Interessi: art. 1282 e 1284 co. 4
+    c.c. (credito ordinario); artt. 4 co. 1 e 5 D.Lgs. 231/2002 (credito commerciale); art. 642 co. 2 c.p.c.
+    riletti il 2026-11-26.
     Precisione: INDICATIVO per la bozza (richiede completamento con dati specifici del caso).
     Chaining: → contributo_unificato() per calcolare le spese di giustizia → modello_notula(tipo_procedimento=
-        'decreto_ingiuntivo') per il compenso del monitorio sulla sua tabella, fase unica (non parcella_avvocato_civile)
+        'decreto_ingiuntivo') per il compenso del monitorio sulla sua tabella, fase unica (non parcella_avvocato_civile).
+        Credito commerciale: genera_modello_atto('decreto_ingiuntivo_fatture') e interessi_mora per ciascuna fattura
 
     Args:
         creditore: Nome o ragione sociale del creditore
         debitore: Nome o ragione sociale del debitore
         importo: Importo del credito in euro (€)
-        tipo_credito: Natura del credito: 'ordinario', 'professionale' (parcella vidimata),
-                      'condominiale' (delibera assembleare), 'cambiale', 'retribuzioni' (crediti di
+        tipo_credito: Natura del credito: 'ordinario', 'commerciale' (corrispettivo di una transazione commerciale
+                      tra imprese ovvero tra imprese e pubbliche amministrazioni, D.Lgs. 231/2002: interessi moratori
+                      dal giorno successivo alla scadenza, senza costituzione in mora), 'professionale' (parcella
+                      vidimata), 'condominiale' (delibera assembleare), 'cambiale', 'retribuzioni' (crediti di
                       lavoro: competenza del tribunale in funzione di giudice del lavoro)
         provvisoria_esecuzione: True per richiedere la clausola ex art. 642 c.p.c.
         reddito_oltre_soglia_lavoro: solo per 'retribuzioni' (art. 9 co. 1-bis DPR 115/2002): True se il reddito
                       imponibile del ricorrente supera tre volte la soglia dell'art. 76; altrimenti CU non dovuto
     """
-    tipi_credito = ("ordinario", "professionale", "condominiale", "cambiale", "retribuzioni")
+    tipi_credito = ("ordinario", "commerciale", "professionale", "condominiale", "cambiale", "retribuzioni")
     if tipo_credito not in tipi_credito:
         return {"errore": f"tipo_credito non riconosciuto: {tipo_credito!r}. Valori ammessi: {', '.join(tipi_credito)}"}
     # Giudice competente: crediti di lavoro sempre al tribunale (art. 413 c.p.c.); per gli altri
@@ -711,7 +716,48 @@ def decreto_ingiuntivo(
         elif tipo_credito == "cambiale":
             motivi_pe.append("credito fondato su cambiale (art. 642 co. 1 c.p.c.)")
         else:
-            motivi_pe.append("pericolo di grave pregiudizio nel ritardo (art. 642 co. 2 c.p.c.)")
+            # Art. 642 co. 2 c.p.c.: two alternative grounds; the lawyer keeps the one that applies
+            motivi_pe.append("vi è pericolo di grave pregiudizio nel ritardo (art. 642 co. 2 c.p.c.) [illustrare]")
+            motivi_pe.append(
+                "il ricorrente produce documentazione sottoscritta dal debitore, comprovante il diritto fatto valere "
+                "(art. 642 co. 2 c.p.c.) [indicare il documento]"
+            )
+
+    # Interest clause by kind of credit
+    avvertenze: list[str] = []
+    riferimenti_interessi = ""
+    if tipo_credito == "commerciale":
+        # Art. 4 co. 1 D.Lgs. 231/2002: late-payment interest runs from the day after the due date, with no
+        # formal demand; art. 5 co. 1: at the rate of the "interessi legali di mora"
+        clausola_interessi = (
+            "oltre interessi moratori nella misura degli interessi legali di mora (art. 5 D.Lgs. 231/2002), "
+            "dal giorno successivo alla scadenza del termine per il pagamento di ciascuna fattura "
+            "[indicare le scadenze] al saldo, senza che sia necessaria la costituzione in mora "
+            "(art. 4 co. 1 D.Lgs. 231/2002)"
+        )
+        riferimenti_interessi = "; artt. 4 e 5 D.Lgs. 231/2002 (interessi moratori)"
+        avvertenze.append(
+            "Credito commerciale: per il ricorso con l'elenco delle fatture usare "
+            "genera_modello_atto(tipo_atto='decreto_ingiuntivo_fatture'); gli interessi di mora di ciascuna "
+            "fattura si calcolano con interessi_mora (data_inizio = scadenza della fattura)"
+        )
+    elif tipo_credito == "ordinario":
+        # Art. 1282 co. 1 c.c.: a liquid and due money credit bears interest by operation of law, with no
+        # formal demand; art. 1284 co. 4 c.c.: from the claim, the rate of D.Lgs. 231/2002
+        clausola_interessi = (
+            "oltre interessi al saggio legale dal [data in cui il credito è divenuto liquido ed esigibile] "
+            "alla domanda (art. 1282 c.c.) e, dalla domanda al saldo, al saggio previsto dalla legislazione "
+            "speciale relativa ai ritardi di pagamento nelle transazioni commerciali (art. 1284 co. 4 c.c.)"
+        )
+        riferimenti_interessi = "; artt. 1282 e 1284 co. 4 c.c. (interessi)"
+        avvertenze.append(
+            "Interessi: i crediti liquidi ed esigibili di somme di danaro producono interessi di pieno diritto, "
+            "salvo che la legge o il titolo stabiliscano diversamente (art. 1282 co. 1 c.c.); i crediti per fitti "
+            "e pigioni, salvo patto contrario, solo dalla costituzione in mora (art. 1282 co. 2 c.c.). Il saggio "
+            "dell'art. 1284 co. 4 c.c. vale se le parti non hanno determinato la misura degli interessi"
+        )
+    else:
+        clausola_interessi = "oltre interessi legali dalla messa in mora al saldo"
 
     bozza = f"""RICORSO PER DECRETO INGIUNTIVO
 (Artt. 633 e ss. c.p.c.)
@@ -736,15 +782,16 @@ Che il credito è certo, liquido ed esigibile, come risulta dalla prova scritta 
 
 CHIEDE
 
-che l'Ill.mo {giudice} voglia emettere decreto con il quale si ingiunge a {debitore} di pagare la somma di Euro {_eur_it(importo)}, oltre interessi legali dalla messa in mora al saldo, oltre spese e competenze del procedimento.
+che l'Ill.mo {giudice} voglia emettere decreto con il quale si ingiunge a {debitore} di pagare la somma di Euro {_eur_it(importo)}, {clausola_interessi}, oltre spese e competenze del procedimento.
 
 Ai fini del contributo unificato si dichiara che il valore della controversia è di Euro {_eur_it(importo)} (art. 14 co. 2 DPR 115/2002) e che il contributo dovuto è di Euro {_eur_it(cu)}."""
 
     if provvisoria_esecuzione:
+        scelta_pe = " [mantenere il motivo che ricorre]" if len(motivi_pe) > 1 else ""
         bozza += f"""
 
-Si chiede altresì che il decreto sia munito di clausola di provvisoria esecuzione ex art. 642 c.p.c., in quanto:
-- {'; '.join(motivi_pe)}"""
+Si chiede altresì che il decreto sia munito di clausola di provvisoria esecuzione ex art. 642 c.p.c., in quanto{scelta_pe}:
+- {(';' + chr(10) + '- ').join(motivi_pe)}"""
 
     bozza += """
 
@@ -769,6 +816,7 @@ Avv. [LEGALE]"""
             "provvisoria_esecuzione": provvisoria_esecuzione,
             "motivi_pe": motivi_pe if provvisoria_esecuzione else None,
         },
+        "avvertenze": avvertenze,
         "termini": {
             "opposizione": (
                 "nel termine fissato nel decreto, dalla notifica: di regola 40 giorni, riducibile fino a 10 o "
@@ -781,6 +829,7 @@ Avv. [LEGALE]"""
         "riferimento_normativo": (
             "Artt. 633-656 c.p.c.; art. 7 c.p.c. (competenza per valore); art. 413 c.p.c. (crediti di lavoro); "
             "artt. 636 e 637 co. 3 c.p.c. (parcella, foro del Consiglio dell'Ordine); artt. 9, 13 e 14 DPR 115/2002"
+            + riferimenti_interessi
         ),
     }
 
