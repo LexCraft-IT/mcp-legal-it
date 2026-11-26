@@ -21,9 +21,11 @@ al giorno, qual è l'ultima versione stabile pubblicata
 (`GET https://api.github.com/repos/LexCraft-IT/mcp-legal-it/releases/latest`, con
 User-Agent generico `mcp-legal-it`, senza parametri né dati tuoi) e, se è più
 recente di quella in uso, lo scrive nelle istruzioni del server e nel log di avvio,
-mai nelle risposte degli strumenti. Per default è spento; lo accende solo il
-`.mcpb` di Claude Desktop, e si spegne dalle impostazioni dell'estensione («Avviso
-di nuova versione»). GitHub vede la richiesta, con l'indirizzo IP da cui parte.
+mai nelle risposte degli strumenti. Per default è spento; lo accende il `.mcpb` di
+Claude Desktop, e si spegne dalle impostazioni dell'estensione («Avviso di nuova
+versione»). Il plugin per Claude Code e le altre installazioni non fanno questo
+controllo, salvo che lo si attivi espressamente con `LEGAL_UPDATE_CHECK=on`.
+GitHub vede la richiesta, con l'indirizzo IP da cui parte.
 Il giorno e l'esito dell'ultimo controllo stanno in
 `$MCP_CACHE_DIR/update_check.json` (niente su disco con `LEGAL_CACHE=off`).
 

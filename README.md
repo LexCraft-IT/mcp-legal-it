@@ -570,7 +570,7 @@ Il plugin include hook che garantiscono l'accuratezza delle citazioni normative:
 | `LEGAL_PREVIGENTE` | `on` | `off` nasconde i tool a normativa previgente (tag `previgente`) |
 | `LEGAL_BROCARDI` | *(spento)* | `on` (anche `1`, `true`, `yes`) accende Brocardi; `off` (anche `0`, `false`, `no`) lo spegne anche per il codice; un altro valore vale come spento. Vedi [Brocardi (spento per default)](#brocardi-spento-per-default) |
 | `MCP_CACHE_DIR` | `~/.cache/mcp-legal-it` | Directory delle cache su disco: percorso assoluto (`~` ammesso); un percorso relativo è ignorato |
-| `LEGAL_UPDATE_CHECK` | *(spento)* | `on` (anche `1`, `true`, `yes`): al più una volta al giorno chiede a GitHub l'ultima versione e la segnala nelle istruzioni del server e nel log di avvio, mai nelle risposte dei tool. Lo accende solo il `.mcpb`; si spegne dalle impostazioni dell'estensione in Claude Desktop |
+| `LEGAL_UPDATE_CHECK` | *(spento)* | `on` (anche `1`, `true`, `yes`): al più una volta al giorno chiede a GitHub l'ultima versione e la segnala nelle istruzioni del server e nel log di avvio, mai nelle risposte dei tool. Lo accende il `.mcpb` (si spegne dalle impostazioni dell'estensione in Claude Desktop); le altre installazioni controllano solo se lo si attiva espressamente |
 
 ### Profili disponibili
 
