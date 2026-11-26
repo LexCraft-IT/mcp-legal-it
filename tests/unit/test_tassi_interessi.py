@@ -1056,6 +1056,22 @@ class TestDecorrenzaPeriodi:
         assert r["periodi"][1]["dal"] == "2024-07-01"
         _contigui(r["periodi"])
 
+    def test_interessi_acconti_casi_limite(self):
+        # part payment on data_inizio: no stretch before it, the first stretch starts the day after
+        r = _call("interessi_acconti", capitale=10000, data_inizio="2024-01-01",
+                  acconti=[{"data": "2024-01-01", "importo": 2000}], data_fine="2024-12-31")
+        assert [p["dal"] for p in r["periodi"]] == ["2024-01-02"]
+        assert r["periodi"][0]["capitale_residuo"] == 8000
+        # part payment on data_fine, and two payments on the same day: contiguous stretches, never dal > al
+        r = _call("interessi_acconti", capitale=10000, data_inizio="2024-01-01",
+                  acconti=[{"data": "2024-06-30", "importo": 1000}, {"data": "2024-06-30", "importo": 1000},
+                           {"data": "2024-12-31", "importo": 500}],
+                  data_fine="2024-12-31")
+        assert [p["dal"] for p in r["periodi"]] == ["2024-01-02", "2024-07-01"]
+        _contigui(r["periodi"])
+        for p in r["periodi"]:
+            assert p["dal"] <= p["al"]
+
     def test_interessi_corso_causa_dal_giorno_dopo_domanda_e_sentenza(self):
         r = _call(
             "interessi_corso_causa",
