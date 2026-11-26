@@ -659,8 +659,8 @@ def decreto_ingiuntivo(
     DPR 115/2002 (CU monitorio, metà ex art. 13 co. 3; art. 9 co. 1-bis per i crediti di lavoro: CU dovuto solo se
     il reddito supera tre volte la soglia dell'art. 76; dichiarazione di valore ex art. 14 co. 2); artt. 636 e 637
     co. 3 c.p.c. per la parcella con parere dell'Ordine. Verificata al 2026-09-29. Interessi: art. 1282 e 1284 co. 4
-    c.c. (credito ordinario); artt. 4 co. 1 e 5 D.Lgs. 231/2002 (credito commerciale); art. 642 co. 2 c.p.c.
-    riletti il 2026-11-26.
+    c.c. (credito ordinario); artt. 4 co. 1, 5 e 6 co. 2 D.Lgs. 231/2002 (credito commerciale); art. 642 co. 2
+    c.p.c. riletti il 2026-11-26.
     Precisione: INDICATIVO per la bozza (richiede completamento con dati specifici del caso).
     Chaining: → contributo_unificato() per calcolare le spese di giustizia → modello_notula(tipo_procedimento=
         'decreto_ingiuntivo') per il compenso del monitorio sulla sua tabella, fase unica (non parcella_avvocato_civile).
@@ -672,7 +672,8 @@ def decreto_ingiuntivo(
         importo: Importo del credito in euro (€)
         tipo_credito: Natura del credito: 'ordinario', 'commerciale' (corrispettivo di una transazione commerciale
                       tra imprese ovvero tra imprese e pubbliche amministrazioni, D.Lgs. 231/2002: interessi moratori
-                      dal giorno successivo alla scadenza, senza costituzione in mora), 'professionale' (parcella
+                      dal giorno successivo alla scadenza, senza costituzione in mora, e importo forfettario di 40
+                      euro per fattura), 'professionale' (parcella
                       vidimata), 'condominiale' (delibera assembleare), 'cambiale', 'retribuzioni' (crediti di
                       lavoro: competenza del tribunale in funzione di giudice del lavoro)
         provvisoria_esecuzione: True per richiedere la clausola ex art. 642 c.p.c.
@@ -728,18 +729,40 @@ def decreto_ingiuntivo(
     riferimenti_interessi = ""
     if tipo_credito == "commerciale":
         # Art. 4 co. 1 D.Lgs. 231/2002: late-payment interest runs from the day after the due date, with no
-        # formal demand; art. 5 co. 1: at the rate of the "interessi legali di mora"
+        # formal demand; art. 5 co. 1: at the rate of the "interessi legali di mora"; art. 6 co. 2: a 40 euro
+        # lump sum, also with no formal demand, due for each late payment (CJEU C-78/22, operative part)
         clausola_interessi = (
             "oltre interessi moratori nella misura degli interessi legali di mora (art. 5 D.Lgs. 231/2002), "
             "dal giorno successivo alla scadenza del termine per il pagamento di ciascuna fattura "
             "[indicare le scadenze] al saldo, senza che sia necessaria la costituzione in mora "
-            "(art. 4 co. 1 D.Lgs. 231/2002)"
+            "(art. 4 co. 1 D.Lgs. 231/2002), e l'importo forfettario di Euro 40,00 per ciascuna fattura "
+            "non pagata alla scadenza [indicare il totale], a titolo di risarcimento per i costi di recupero "
+            "(art. 6 co. 2 D.Lgs. 231/2002)"
         )
-        riferimenti_interessi = "; artt. 4 e 5 D.Lgs. 231/2002 (interessi moratori)"
+        riferimenti_interessi = "; artt. 4, 5 e 6 D.Lgs. 231/2002 (interessi moratori e importo forfettario)"
         avvertenze.append(
             "Credito commerciale: il modello decreto_ingiuntivo_fatture (genera_modello_atto) aggiunge l'elenco "
             "delle fatture; gli interessi di mora di ciascuna fattura si calcolano con interessi_mora "
             "(data_inizio = scadenza della fattura)"
+        )
+        avvertenze.append(
+            "Importo forfettario: spetta senza che sia necessaria la costituzione in mora; è fatta salva la prova "
+            "del maggior danno, che può comprendere i costi di assistenza per il recupero del credito (art. 6 "
+            "co. 2 D.Lgs. 231/2002). Se uno stesso contratto prevede pagamenti periodici, l'importo è dovuto per "
+            "ciascun ritardo di pagamento (Corte di giustizia UE, 4 maggio 2023, C-78/22)"
+        )
+        avvertenze.append(
+            "Tasso concordato: nelle transazioni commerciali tra imprese le parti possono concordare un tasso di "
+            "interesse diverso, nei limiti dell'art. 7 (art. 5 co. 1 D.Lgs. 231/2002); se è stato concordato, "
+            "nella clausola sostituisce gli interessi legali di mora [indicare il tasso e la clausola del "
+            "contratto]. La facoltà non riguarda le transazioni con una pubblica amministrazione; interessi_mora "
+            "calcola solo gli interessi legali di mora"
+        )
+        avvertenze.append(
+            "Transazioni anteriori al 2013: il testo vigente del D.Lgs. 231/2002, importo forfettario compreso, "
+            "si applica alle transazioni commerciali concluse dal 1° gennaio 2013 (art. 3 co. 1 D.Lgs. 192/2012); "
+            "per le anteriori interessi_mora applica la maggiorazione di sette punti (contratto_ante_2013) e "
+            "l'importo forfettario va tolto dalla clausola"
         )
     elif tipo_credito == "ordinario":
         # Art. 1282 co. 1 c.c.: a liquid and due money credit bears interest by operation of law, with no

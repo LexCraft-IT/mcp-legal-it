@@ -540,6 +540,27 @@ class TestDecretoIngiuntivo:
         assert "D.Lgs. 231/2002" in r["riferimento_normativo"]
         # the commercial draft points to the invoice model (#203, point 3)
         assert any("decreto_ingiuntivo_fatture" in a for a in r["avvertenze"])
+
+    def test_commerciale_importo_forfettario_e_tasso_concordato(self):
+        # Art. 6 co. 2 D.Lgs. 231/2002 (read 2026-11-26): «un importo forfettario di 40 euro a titolo di
+        # risarcimento del danno», with no formal demand; CJEU C-78/22: due for each late payment.
+        # Art. 5 co. 1, second sentence: between businesses the parties may agree a different rate (LI-101)
+        r = _call("decreto_ingiuntivo", creditore="Alfa S.r.l.", debitore="Beta S.r.l.", importo=12000,
+                  tipo_credito="commerciale")
+        bozza = r["bozza_ricorso"]
+        assert ("e l'importo forfettario di Euro 40,00 per ciascuna fattura non pagata alla scadenza "
+                "[indicare il totale], a titolo di risarcimento per i costi di recupero "
+                "(art. 6 co. 2 D.Lgs. 231/2002), oltre spese e competenze") in bozza
+        assert "artt. 4, 5 e 6 D.Lgs. 231/2002" in r["riferimento_normativo"]
+        avv = " ".join(r["avvertenze"])
+        assert "fatta salva la prova del maggior danno" in avv and "C-78/22" in avv
+        assert "concordare un tasso di interesse diverso, nei limiti dell'art. 7" in avv
+        assert "sostituisce gli interessi legali di mora" in avv
+        assert "non riguarda le transazioni con una pubblica amministrazione" in avv
+        assert "concluse dal 1° gennaio 2013" in avv and "contratto_ante_2013" in avv
+        # the lump sum belongs to the commercial draft only
+        o = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=12000)
+        assert "forfettario" not in o["bozza_ricorso"]
         # same court and contributo as an ordinary credit
         o = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=12000)
         assert r["riepilogo"]["giudice_competente"] == o["riepilogo"]["giudice_competente"]

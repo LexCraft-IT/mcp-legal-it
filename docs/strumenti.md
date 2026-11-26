@@ -594,7 +594,7 @@ _Genera bozza di ricorso per decreto ingiuntivo con giudice competente per valor
 - `creditore` (str, obbligatorio) — nome del creditore.
 - `debitore` (str, obbligatorio) — nome del debitore.
 - `importo` (float, obbligatorio) — importo del credito in euro.
-- `tipo_credito` (str, opzionale, default `"ordinario"`) — `'ordinario'` (interessi ex art. 1282 c.c. e, dalla domanda, art. 1284 co. 4 c.c.), `'commerciale'` (transazione commerciale, D.Lgs. 231/2002: interessi moratori dal giorno successivo alla scadenza, senza costituzione in mora; per l'elenco delle fatture il modello `decreto_ingiuntivo_fatture`), `'professionale'`, `'condominiale'`, `'cambiale'`, `'retribuzioni'`.
+- `tipo_credito` (str, opzionale, default `"ordinario"`) — `'ordinario'` (interessi ex art. 1282 c.c. e, dalla domanda, art. 1284 co. 4 c.c.), `'commerciale'` (transazione commerciale, D.Lgs. 231/2002: interessi moratori dal giorno successivo alla scadenza, senza costituzione in mora, e importo forfettario di 40 euro per fattura, art. 6 co. 2; tasso concordato tra imprese in avvertenza; per l'elenco delle fatture il modello `decreto_ingiuntivo_fatture`), `'professionale'`, `'condominiale'`, `'cambiale'`, `'retribuzioni'`.
 - `provvisoria_esecuzione` (bool, opzionale, default `False`) — `True` per richiedere clausola art. 642 c.p.c. (per i crediti ordinari, commerciali e di lavoro la bozza propone i due motivi del co. 2: pericolo di grave pregiudizio nel ritardo o documentazione sottoscritta dal debitore).
 
 **Quando usare**: avviare il procedimento monitorio per crediti certi, liquidi ed esigibili.

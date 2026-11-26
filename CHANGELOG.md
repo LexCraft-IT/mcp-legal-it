@@ -1087,7 +1087,10 @@ described in those sections, not repeated here. Upgrading from 2.x:
   Each norm was read through `cite_law` on 2026-11-26.
   - **New `tipo_credito='commerciale'`**, for the price of a commercial transaction (D.Lgs. 231/2002,
     art. 2 co. 1 lett. a): late-payment interest at the rate of art. 5, from the day after the due date
-    of each invoice, with no formal demand (art. 4 co. 1). The draft points to the
+    of each invoice, with no formal demand (art. 4 co. 1), and the 40 euro lump sum of art. 6 co. 2 for
+    each invoice not paid on time (CJEU C-78/22: one for each late payment). Warnings cover the greater
+    loss, a rate agreed between businesses (art. 5 co. 1, within art. 7; not with a public
+    administration) and transactions concluded before 2013 (LI-101). The draft points to the
     `decreto_ingiuntivo_fatture` model. That model routed to `tipo_credito='fatture'`, a value the tool
     refused; it now passes `commerciale`, and a test calls the tool with the fixed parameters of every
     decreto ingiuntivo model.
