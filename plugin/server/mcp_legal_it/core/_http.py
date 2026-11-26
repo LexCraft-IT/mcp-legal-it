@@ -97,6 +97,9 @@ HOST_PER_FONTE: dict[str, frozenset[str] | None] = {
     "vies": frozenset({"ec.europa.eu"}),
     "cnf": frozenset({"www.consiglionazionaleforense.it"}),
     "dpa_probe": None,
+    # Not a legal source: the daily new-version notice of the .mcpb build
+    # (mcp_legal_it/_update_check.py, LEGAL_UPDATE_CHECK, LI-096). Off unless the .mcpb switches it on.
+    "github_releases": frozenset({"api.github.com"}),
 }
 
 

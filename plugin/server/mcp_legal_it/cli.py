@@ -13,6 +13,7 @@ os.environ.setdefault("FASTMCP_CHECK_FOR_UPDATES", "off")
 
 from mcp_legal_it._profilo import ProfiloSconosciuto  # noqa: E402
 from mcp_legal_it.cli_version import package_version  # noqa: E402  re-export
+from mcp_legal_it import _update_check  # noqa: E402
 
 try:
     from mcp_legal_it.server import mcp  # noqa: E402  (module-level for patching in tests)
@@ -37,8 +38,12 @@ def main(argv: list[str] | None = None) -> None:
     MCP_TRANSPORT: stdio (default) | http | sse
     MCP_HOST / MCP_PORT / MCP_PATH: used by http and sse
     LEGAL_PROFILE: tool profile, read by mcp_legal_it.server at import time
+    LEGAL_UPDATE_CHECK: on for the daily new-version notice (the .mcpb sets it), off by default
     """
     _build_parser().parse_args(argv)
+    # Before run: the notice goes in the instructions a client reads at initialize
+    # and on stderr, never in a tool answer (LI-045, LI-096).
+    _update_check.apply(mcp, package_version())
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     host = os.environ.get("MCP_HOST", "0.0.0.0")
     port = int(os.environ.get("MCP_PORT", "8000"))

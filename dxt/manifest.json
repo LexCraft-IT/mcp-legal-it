@@ -50,7 +50,19 @@
         "--with",
         "cryptography>=50; sys_platform != 'darwin' or platform_machine != 'x86_64'",
         "${__dirname}/server/run_server.py"
-      ]
+      ],
+      "env": {
+        "LEGAL_UPDATE_CHECK": "${user_config.update_check}"
+      }
+    }
+  },
+  "user_config": {
+    "update_check": {
+      "type": "boolean",
+      "title": "Avviso di nuova versione",
+      "description": "Al più una volta al giorno chiede a GitHub (api.github.com) qual è l'ultima versione pubblicata e, se è più recente di quella installata, lo segnala all'avvio. Parte solo la richiesta, con l'indirizzo IP e un identificativo generico del programma; nessun dato sulle tue ricerche.",
+      "default": true,
+      "required": false
     }
   },
   "compatibility": {

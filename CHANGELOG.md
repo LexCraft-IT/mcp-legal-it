@@ -15,6 +15,20 @@ described in those sections, not repeated here. Upgrading from 2.x:
 [`docs/migration/2.x-to-3.0.md`](docs/migration/2.x-to-3.0.md).
 
 ### Added
+- **Daily new-version notice in the `.mcpb` (LI-096).** Who installs the Claude Desktop extension
+  by hand now learns when a newer stable release is out. With `LEGAL_UPDATE_CHECK=on` the server
+  asks GitHub (`api.github.com`, `releases/latest`) at most once a day, with a generic User-Agent
+  and nothing about the user or their queries, and when the running version is older (a
+  `3.0.0-beta.5` is older than `3.0.0`) it says so, in Italian with a link to the release page, in
+  the server instructions and on stderr, never in a tool answer (LI-045). Startup waits at most 2
+  seconds for the check; a check that does not answer in time finishes in the background for the
+  next start. A network failure, a timeout, a rate limit or a bad payload produce no notice and no
+  message. The day and the result live in `MCP_CACHE_DIR/update_check.json` (declared in
+  `docs/cache-inventory.md`); with `LEGAL_CACHE=off` nothing is written and the check runs once per
+  start. Off by default: only `dxt/manifest.json` turns it on, through the `user_config` boolean
+  «Avviso di nuova versione» (default true) that a Claude Desktop user switches off in the
+  extension settings. `api.github.com` joins the allowlist (`_egress.py`, `SECURITY.md`) and the
+  privacy notice describes the connection.
 - **Sigle and nicknames of testi unici and laws, second pass (G-440).** «TUED» / «T.U.E.D.» (testo
   unico edilizia, so «art. 36-bis TUED» reads), «TUEs» / «TUEspr» (espropri), «TUSG» and «T.U. spese
   di giustizia» (d.P.R. 115/2002), «TUDA» (d.P.R. 445/2000), «T.U. accise» (d.lgs. 504/1995), «TULD»
