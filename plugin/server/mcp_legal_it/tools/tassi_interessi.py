@@ -164,9 +164,9 @@ def interessi_legali(
     montante = capitale
     totale_interessi = 0.0
 
-    # "dies a quo non computatur": first accruing day is dt_inizio + 1
+    # "dies a quo non computatur": first accruing day is dt_inizio + 1, and each period's
+    # "dal" is its first accruing day (the first period never shows data_inizio itself)
     current = dt_inizio + timedelta(days=1)
-    dal_display = dt_inizio
 
     while current <= dt_fine:
         tasso, al = _get_rate_period(current)
@@ -188,14 +188,13 @@ def interessi_legali(
 
         totale_interessi += interessi_periodo
         periodi.append({
-            "dal": dal_display.isoformat(),
+            "dal": current.isoformat(),
             "al": periodo_end.isoformat(),
             "giorni": giorni,
             "tasso_pct": tasso,
             "interessi": round(interessi_periodo, 2),
         })
         current = periodo_end + timedelta(days=1)
-        dal_display = current
 
     return {
         "capitale": capitale,
@@ -251,9 +250,9 @@ def interessi_mora(
     periodi = []
     totale_interessi = 0.0
 
-    # "dies a quo non computatur": first accruing day is dt_inizio + 1
+    # "dies a quo non computatur": first accruing day is dt_inizio + 1, and each period's
+    # "dal" is its first accruing day (the first period never shows data_inizio itself)
     current = dt_inizio + timedelta(days=1)
-    dal_display = dt_inizio
     ultimo_coperto = _parse_date(_TASSI_MORA[-1]["al"])
 
     while current <= dt_fine:
@@ -269,7 +268,7 @@ def interessi_mora(
 
         totale_interessi += interessi_periodo
         periodi.append({
-            "dal": dal_display.isoformat(),
+            "dal": current.isoformat(),
             "al": periodo_end.isoformat(),
             "giorni": giorni,
             "tasso_bce_pct": info["bce"],
@@ -277,7 +276,6 @@ def interessi_mora(
             "interessi": round(interessi_periodo, 2),
         })
         current = periodo_end + timedelta(days=1)
-        dal_display = current
 
     risultato = {
         "capitale": capitale,
@@ -590,7 +588,8 @@ def interessi_acconti(
             totale_interessi += interessi_periodo
             interessi_residui += interessi_periodo
             periodi.append({
-                "dal": current.isoformat(),
+                # first accruing day: the day after data_inizio or after the previous part payment
+                "dal": (current + timedelta(days=1)).isoformat(),
                 "al": dt_mov.isoformat(),
                 "capitale_residuo": round(capitale_residuo, 2),
                 "interessi": round(interessi_periodo, 2),
@@ -713,13 +712,14 @@ def _corso_causa_saggio_legale(capitale, data_citazione, data_sentenza, data_pag
     dt_c, dt_s = _parse_date(data_citazione), _parse_date(data_sentenza)
     dt_p = _parse_date(data_pagamento) if data_pagamento else dt_s
     causa = _calc_interessi_periodo(capitale, dt_c, dt_s)
-    periodi = [{"tipo": "in_corso_causa", "dal": data_citazione, "al": data_sentenza,
+    # "dal" is the first accruing day: the day after the claim, then the day after the judgment
+    periodi = [{"tipo": "in_corso_causa", "dal": (dt_c + timedelta(days=1)).isoformat(), "al": data_sentenza,
                 "tasso_tipo": "saggio legale art. 1284 co. 1 c.c.", "interessi": round(causa, 2)}]
     totale = causa
     if dt_p > dt_s:
         post = _calc_interessi_periodo(capitale, dt_s, dt_p)
         totale += post
-        periodi.append({"tipo": "post_sentenza", "dal": data_sentenza, "al": dt_p.isoformat(),
+        periodi.append({"tipo": "post_sentenza", "dal": (dt_s + timedelta(days=1)).isoformat(), "al": dt_p.isoformat(),
                         "tasso_tipo": "saggio legale art. 1284 co. 1 c.c.", "interessi": round(post, 2)})
     return {
         "capitale": capitale, "data_citazione": data_citazione, "data_sentenza": data_sentenza,
@@ -774,9 +774,10 @@ def interessi_corso_causa(
     interessi_causa, _ = _calc_interessi_mora_periodo(capitale, dt_citazione, dt_sentenza)
     totale_interessi = interessi_causa
 
+    # "dal" is the first accruing day: the day after the claim, then the day after the judgment
     periodi = [{
         "tipo": "in_corso_causa",
-        "dal": data_citazione,
+        "dal": (dt_citazione + timedelta(days=1)).isoformat(),
         "al": data_sentenza,
         "tasso_tipo": "mora D.Lgs. 231/2002",
         "interessi": round(interessi_causa, 2),
@@ -789,7 +790,7 @@ def interessi_corso_causa(
         totale_interessi += interessi_post
         periodi.append({
             "tipo": "post_sentenza",
-            "dal": data_sentenza,
+            "dal": (dt_sentenza + timedelta(days=1)).isoformat(),
             "al": dt_pagamento.isoformat(),
             "tasso_tipo": "mora D.Lgs. 231/2002",
             "interessi": round(interessi_post, 2),

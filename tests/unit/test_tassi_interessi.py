@@ -1,6 +1,6 @@
 import importlib
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -1002,3 +1002,96 @@ class TestMaggiorDannoAvvertenza:
             data_fine="2020-01-01",
         )
         assert "errore" in r
+
+
+# ---------------------------------------------------------------------------
+# Period start (#201): "dal" is the first day that accrues interest
+# ---------------------------------------------------------------------------
+
+
+def _contigui(periodi):
+    """Each period starts the day after the previous one ends: no day counted twice or skipped."""
+    for prima, dopo in zip(periodi, periodi[1:]):
+        assert date.fromisoformat(dopo["dal"]) == date.fromisoformat(prima["al"]) + timedelta(days=1)
+
+
+class TestDecorrenzaPeriodi:
+    """The count starts the day after the date passed in (dies a quo non computatur, LI-092):
+    the first period must show that day, not the start date, so a draft copying it is right."""
+
+    def test_interessi_legali_primo_dal_e_il_giorno_dopo(self):
+        r = _call("interessi_legali", capitale=10000, data_inizio="2026-04-12", data_fine="2026-06-30")
+        assert r["periodi"][0]["dal"] == "2026-04-13"
+        assert r["periodi"][0]["giorni"] == 79  # 13/4 -> 30/6 inclusive
+
+    def test_interessi_legali_periodi_contigui_tra_anni(self):
+        r = _call("interessi_legali", capitale=10000, data_inizio="2023-05-10", data_fine="2025-03-01")
+        assert r["periodi"][0]["dal"] == "2023-05-11"
+        _contigui(r["periodi"])
+        for p in r["periodi"]:
+            span = date.fromisoformat(p["al"]).toordinal() - date.fromisoformat(p["dal"]).toordinal() + 1
+            assert span == p["giorni"]
+
+    def test_interessi_mora_primo_dal_e_il_giorno_dopo(self):
+        # Art. 4 co. 1 D.Lgs. 231/2002: late-payment interest from the day after the due date
+        r = _call("interessi_mora", capitale=10000, data_inizio="2026-04-12", data_fine="2026-06-30")
+        assert r["periodi"][0]["dal"] == "2026-04-13"
+        assert r["periodi"][0]["giorni"] == 79
+
+    def test_interessi_mora_periodi_contigui_tra_semestri(self):
+        r = _call("interessi_mora", capitale=10000, data_inizio="2024-03-31", data_fine="2025-02-28")
+        assert r["periodi"][0]["dal"] == "2024-04-01"
+        _contigui(r["periodi"])
+
+    def test_interessi_acconti_ogni_tratto_parte_dal_giorno_dopo(self):
+        r = _call(
+            "interessi_acconti",
+            capitale=10000,
+            data_inizio="2024-01-01",
+            acconti=[{"data": "2024-06-30", "importo": 2000}],
+            data_fine="2024-12-31",
+        )
+        assert r["periodi"][0]["dal"] == "2024-01-02"
+        # after the part payment of 30/6 interest on the residue runs from 1/7
+        assert r["periodi"][1]["dal"] == "2024-07-01"
+        _contigui(r["periodi"])
+
+    def test_interessi_acconti_casi_limite(self):
+        # part payment on data_inizio: no stretch before it, the first stretch starts the day after
+        r = _call("interessi_acconti", capitale=10000, data_inizio="2024-01-01",
+                  acconti=[{"data": "2024-01-01", "importo": 2000}], data_fine="2024-12-31")
+        assert [p["dal"] for p in r["periodi"]] == ["2024-01-02"]
+        assert r["periodi"][0]["capitale_residuo"] == 8000
+        # part payment on data_fine, and two payments on the same day: contiguous stretches, never dal > al
+        r = _call("interessi_acconti", capitale=10000, data_inizio="2024-01-01",
+                  acconti=[{"data": "2024-06-30", "importo": 1000}, {"data": "2024-06-30", "importo": 1000},
+                           {"data": "2024-12-31", "importo": 500}],
+                  data_fine="2024-12-31")
+        assert [p["dal"] for p in r["periodi"]] == ["2024-01-02", "2024-07-01"]
+        _contigui(r["periodi"])
+        for p in r["periodi"]:
+            assert p["dal"] <= p["al"]
+
+    def test_interessi_corso_causa_dal_giorno_dopo_domanda_e_sentenza(self):
+        r = _call(
+            "interessi_corso_causa",
+            capitale=10000,
+            data_citazione="2023-03-15",
+            data_sentenza="2024-09-20",
+            data_pagamento="2025-01-31",
+        )
+        assert r["periodi"][0]["dal"] == "2023-03-16"
+        assert r["periodi"][1]["dal"] == "2024-09-21"
+        _contigui(r["periodi"])
+
+    def test_interessi_corso_causa_ante_2014_stessa_decorrenza(self):
+        r = _call(
+            "interessi_corso_causa",
+            capitale=10000,
+            data_citazione="2013-03-15",
+            data_sentenza="2014-09-20",
+            data_pagamento="2015-01-31",
+        )
+        assert r["periodi"][0]["dal"] == "2013-03-16"
+        assert r["periodi"][1]["dal"] == "2014-09-21"
+        _contigui(r["periodi"])

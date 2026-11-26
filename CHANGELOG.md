@@ -1039,6 +1039,14 @@ described in those sections, not repeated here. Upgrading from 2.x:
   server runs without the disk cache.
 
 ### Fixed
+- **Interest periods start on the first day of interest (#201, LI-099).** `interessi_legali`,
+  `interessi_mora`, `interessi_acconti` and `interessi_corso_causa` count from the day after the date
+  passed in (dies a quo non computatur), but their first period showed that date as `dal`: «dal
+  2026-04-12 al 2026-06-30, giorni 79», where the 79 days run from 13 April. A draft that copied `dal`
+  stated a start one day early. Every period now begins on its first day of interest: the day after
+  `data_inizio`, after each part payment in `interessi_acconti`, after the claim and after the
+  judgment in `interessi_corso_causa`, so the periods follow one another without overlapping.
+  **No amount changed**; the golden reference moves only in `dal`.
 - **Act models and two calculators: seven findings of a drafting trial (#195).** Each norm was read on
   the text in force on Normattiva on 2026-11-22.
   - **Tier 3 routes named resources that do not exist.** 34 models pointed to
