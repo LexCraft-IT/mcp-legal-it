@@ -510,6 +510,16 @@ class TestVerificaUsura:
 # ---------------------------------------------------------------------------
 
 
+def test_interessi_acconti_dice_che_applica_solo_il_saggio_legale():
+    # #202: no rate choice yet; the description says so and names the tool for the art. 1284 co. 4 rate
+    import mcp_legal_it.tools.tassi_interessi as mod
+
+    fn = getattr(mod.interessi_acconti, "fn", mod.interessi_acconti)
+    doc = " ".join(fn.__doc__.split())
+    assert "Applica solo il saggio legale dell'art. 1284 co. 1 c.c." in doc
+    assert "usare interessi_corso_causa, che non gestisce acconti" in doc
+
+
 class TestInteressiAcconti:
     def test_single_acconto(self):
         r = _call(

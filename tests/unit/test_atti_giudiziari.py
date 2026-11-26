@@ -525,6 +525,88 @@ class TestDecretoIngiuntivo:
         )
         assert "delibera" in r["riepilogo"]["motivi_pe"][0]
 
+    # --- #203: interest clause by kind of credit, art. 642 co. 2 grounds, routing ---
+
+    def test_commerciale_interessi_moratori_senza_costituzione_in_mora(self):
+        # Art. 4 co. 1 D.Lgs. 231/2002 (read 2026-11-26): «Gli interessi moratori decorrono, senza che sia
+        # necessaria la costituzione in mora, dal giorno successivo alla scadenza del termine per il pagamento»
+        r = _call("decreto_ingiuntivo", creditore="Alfa S.r.l.", debitore="Beta S.r.l.", importo=12000,
+                  tipo_credito="commerciale")
+        bozza = r["bozza_ricorso"]
+        assert "dalla messa in mora" not in bozza
+        assert "interessi moratori nella misura degli interessi legali di mora (art. 5 D.Lgs. 231/2002)" in bozza
+        assert "dal giorno successivo alla scadenza del termine per il pagamento di ciascuna fattura" in bozza
+        assert "senza che sia necessaria la costituzione in mora (art. 4 co. 1 D.Lgs. 231/2002)" in bozza
+        assert "D.Lgs. 231/2002" in r["riferimento_normativo"]
+        # the commercial draft points to the invoice model (#203, point 3)
+        assert any("decreto_ingiuntivo_fatture" in a for a in r["avvertenze"])
+        # same court and contributo as an ordinary credit
+        o = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=12000)
+        assert r["riepilogo"]["giudice_competente"] == o["riepilogo"]["giudice_competente"]
+        assert r["riepilogo"]["contributo_unificato"] == o["riepilogo"]["contributo_unificato"]
+
+    def test_commerciale_importo_forfettario_e_tasso_concordato(self):
+        # Art. 6 co. 2 D.Lgs. 231/2002 (read 2026-11-26): «un importo forfettario di 40 euro a titolo di
+        # risarcimento del danno», with no formal demand; CJEU C-78/22: due for each late payment.
+        # Art. 5 co. 1, second sentence: between businesses the parties may agree a different rate (LI-101)
+        r = _call("decreto_ingiuntivo", creditore="Alfa S.r.l.", debitore="Beta S.r.l.", importo=12000,
+                  tipo_credito="commerciale")
+        bozza = r["bozza_ricorso"]
+        assert ("e l'importo forfettario di Euro 40,00 per ciascuna fattura non pagata alla scadenza "
+                "[indicare il totale], a titolo di risarcimento per i costi di recupero "
+                "(art. 6 co. 2 D.Lgs. 231/2002), oltre spese e competenze") in bozza
+        assert "artt. 4, 5 e 6 D.Lgs. 231/2002" in r["riferimento_normativo"]
+        avv = " ".join(r["avvertenze"])
+        assert "fatta salva la prova del maggior danno" in avv and "C-78/22" in avv
+        assert "concordare un tasso di interesse diverso, nei limiti dell'art. 7" in avv
+        assert "sostituisce gli interessi legali di mora" in avv
+        assert "non riguarda le transazioni con una pubblica amministrazione" in avv
+        assert "concluse dal 1° gennaio 2013" in avv and "contratto_ante_2013" in avv
+        # the lump sum belongs to the commercial draft only
+        o = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=12000)
+        assert "forfettario" not in o["bozza_ricorso"]
+
+    def test_ordinario_interessi_non_legati_alla_messa_in_mora(self):
+        # Art. 1282 co. 1 c.c.: liquid and due money credits bear interest «di pieno diritto»;
+        # art. 1284 co. 4 c.c.: from the claim, the rate of the late-payment law
+        r = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=5000)
+        bozza = r["bozza_ricorso"]
+        assert "dalla messa in mora" not in bozza
+        assert "liquido ed esigibile] alla domanda (art. 1282 c.c.)" in bozza
+        assert "dalla domanda al saldo" in bozza and "(art. 1284 co. 4 c.c.)" in bozza
+        avv = " ".join(r["avvertenze"])
+        assert "art. 1282 co. 2 c.c." in avv and "fitti e pigioni" in avv  # rents: only from the demand
+        assert "non hanno determinato la misura" in avv  # art. 1284 co. 4 applies only then
+
+    def test_altri_tipi_clausola_invariata(self):
+        # Only the ordinary and commercial clauses were reviewed (#203); the other kinds keep theirs
+        for tipo in ("professionale", "condominiale", "cambiale", "retribuzioni"):
+            r = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=5000, tipo_credito=tipo)
+            assert "oltre interessi legali dalla messa in mora al saldo" in r["bozza_ricorso"], tipo
+            assert r["avvertenze"] == [], tipo
+
+    def test_provvisoria_esecuzione_ordinario_due_motivi_art_642_co_2(self):
+        # Art. 642 co. 2 c.p.c. (read 2026-11-26): danger of serious prejudice, «ovvero» documentation
+        # signed by the debtor proving the right
+        # the norm does not distinguish the kind of credit: labour credits, which had the danger ground
+        # only, get both too
+        for tipo in ("ordinario", "commerciale", "retribuzioni"):
+            r = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=5000, tipo_credito=tipo,
+                      provvisoria_esecuzione=True)
+            motivi = r["riepilogo"]["motivi_pe"]
+            assert len(motivi) == 2, tipo
+            assert "pericolo di grave pregiudizio nel ritardo" in motivi[0]
+            assert "documentazione sottoscritta dal debitore, comprovante il diritto fatto valere" in motivi[1]
+            bozza = r["bozza_ricorso"]
+            assert "[mantenere il motivo che ricorre]:" in bozza
+            assert "\n- vi è pericolo" in bozza and "\n- il ricorrente produce documentazione" in bozza
+
+    def test_provvisoria_esecuzione_un_motivo_senza_scelta(self):
+        r = _call("decreto_ingiuntivo", creditore="A", debitore="B", importo=5000, tipo_credito="cambiale",
+                  provvisoria_esecuzione=True)
+        assert "in quanto:\n- credito fondato su cambiale" in r["bozza_ricorso"]
+        assert "[mantenere il motivo che ricorre]" not in r["bozza_ricorso"]
+
 
 # ---------------------------------------------------------------------------
 # calcolo_hash

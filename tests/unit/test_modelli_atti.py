@@ -403,6 +403,34 @@ class TestCatalogoNormeVigenti:
         r = genera_modello_atto("relata_pec_appello")
         assert r["parametri_fissi"] == {} and r["variante"] == {"tipo_relata": "appello"}
 
+    def test_tipo_credito_dei_modelli_accettato_dal_tool(self):
+        # #203: decreto_ingiuntivo_fatture routed to tipo_credito='fatture', which the tool refused.
+        # Every decreto ingiuntivo model now passes a tipo_credito the tool accepts.
+        from mcp_legal_it.tools.atti_giudiziari import decreto_ingiuntivo
+
+        fn = getattr(decreto_ingiuntivo, "fn", decreto_ingiuntivo)
+        for tipo, e in _CATALOGO.items():
+            if e["routing"].get("tool") != "decreto_ingiuntivo":
+                continue
+            r = fn(creditore="A", debitore="B", importo=5000, **e["routing"]["parametri_fissi"])
+            assert "errore" not in r, (tipo, r.get("errore"))
+        assert _CATALOGO["decreto_ingiuntivo_fatture"]["routing"]["parametri_fissi"] == {"tipo_credito": "commerciale"}
+
+    def test_decreto_ingiuntivo_ordinario_rinvia_al_modello_fatture(self):
+        # #203: a commercial credit (D.Lgs. 231/2002) goes to the invoice model, with late-payment interest
+        # from the day after the due date and no formal demand (art. 4 co. 1, read 2026-11-26)
+        avv = " ".join(genera_modello_atto("decreto_ingiuntivo_ordinario")["avvertenze"])
+        assert "decreto_ingiuntivo_fatture" in avv
+        assert "senza che sia necessaria la costituzione in mora (art. 4 co. 1 D.Lgs. 231/2002)" in avv
+
+    def test_precetto_avverte_che_interessi_acconti_applica_il_saggio_legale(self):
+        # #202: interessi_acconti has no rate choice; the precetto model says so and names the tool
+        # for the art. 1284 co. 4 rate
+        avv = [a for a in _CATALOGO["atto_di_precetto"]["avvertenze"] if a.startswith("interessi_acconti")]
+        assert len(avv) == 1
+        assert "art. 1284 co. 1 c.c." in avv[0] and "art. 1284 co. 4 c.c." in avv[0]
+        assert "interessi_corso_causa" in avv[0] and "non gestisce acconti" in avv[0]
+
 
 # ---------------------------------------------------------------------------
 # esporta_atto_docx — Markdown to Word, offline (the live gate repeats these)

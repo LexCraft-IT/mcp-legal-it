@@ -545,6 +545,8 @@ def interessi_acconti(
     (art. 1283 c.c.). Con imputazione="capitale" l'acconto riduce direttamente il capitale: ammesso solo con il consenso
     del creditore (art. 1194 co. 1 c.c.). L'acconto alla data finale e' computato (dies ad quem incluso); un acconto
     anteriore alla decorrenza, successivo alla data finale o superiore al credito residuo e' rifiutato.
+    Applica solo il saggio legale dell'art. 1284 co. 1 c.c.: per il saggio dell'art. 1284 co. 4 c.c. (dalla domanda
+    giudiziale) usare interessi_corso_causa, che non gestisce acconti.
     Vigenza: Art. 1194 e 1284 c.c.; tassi legali vigenti per ciascun anno del periodo.
     Precisione: ESATTO per tassi legali storici; INDICATIVO per tassi futuri.
 

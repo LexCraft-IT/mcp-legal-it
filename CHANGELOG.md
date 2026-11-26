@@ -1104,6 +1104,31 @@ described in those sections, not repeated here. Upgrading from 2.x:
     `false`, which exposed the claim to improcedibility (art. 5 co. 2). `false` stays only for
     circolazione stradale, a known matter outside the list (negoziazione assistita instead). The 21
     matters of the table match art. 5 co. 1 in force.
+- **`decreto_ingiuntivo`: interest by kind of credit, both grounds of art. 642 co. 2, the invoice model
+  (#203, #202, LI-098).** The draft always asked for «interessi legali dalla messa in mora al saldo».
+  Each norm was read through `cite_law` on 2026-11-26.
+  - **New `tipo_credito='commerciale'`**, for the price of a commercial transaction (D.Lgs. 231/2002,
+    art. 2 co. 1 lett. a): late-payment interest at the rate of art. 5, from the day after the due date
+    of each invoice, with no formal demand (art. 4 co. 1), and the 40 euro lump sum of art. 6 co. 2 for
+    each invoice not paid on time (CJEU C-78/22: one for each late payment). Warnings cover the greater
+    loss, a rate agreed between businesses (art. 5 co. 1, within art. 7; not with a public
+    administration) and transactions concluded before 2013 (LI-101). The draft points to the
+    `decreto_ingiuntivo_fatture` model. That model routed to `tipo_credito='fatture'`, a value the tool
+    refused; it now passes `commerciale`, and a test calls the tool with the fixed parameters of every
+    decreto ingiuntivo model.
+  - **Ordinary credit.** Interest at the legal rate from the day the credit became liquid and due, by
+    operation of law (art. 1282 co. 1 c.c.), and from the claim at the rate of art. 1284 co. 4 c.c. A
+    warning gives the limits of both norms: what the law or the title provides otherwise, rents only from
+    the formal demand (art. 1282 co. 2), co. 4 only if the parties did not fix the rate. The
+    `decreto_ingiuntivo_ordinario` model sends a commercial credit to `decreto_ingiuntivo_fatture`.
+  - **Provisional enforcement.** For an ordinary, commercial or labour credit the draft gives both
+    grounds of art. 642 co. 2 c.p.c., the danger of serious prejudice or documentation signed by the
+    debtor proving the right, one per line, and asks to keep the one that applies (before, only the
+    danger). Professional, condominium and bill-of-exchange credits keep their grounds; the interest
+    clause changes only for the ordinary and commercial credit.
+  - **#202, warning only.** `interessi_acconti` and the `atto_di_precetto` model say that it applies the
+    legal rate of art. 1284 co. 1 c.c. only, and name `interessi_corso_causa` for the co. 4 rate, which
+    takes no part payments. A rate choice on `interessi_acconti` is left to a later release.
 - **`cookie-audit`: the newsletter-form probe reads the form's real address (#175).** It read
   the form's `action` property, which a field named «action» inside the form hides (WordPress
   forms posting to `admin-ajax.php` have one): the probe threw on any page with such a form, and

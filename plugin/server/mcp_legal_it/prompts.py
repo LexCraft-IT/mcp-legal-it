@@ -1501,7 +1501,7 @@ Chiama `rivalutazione_monetaria` con l'importo del credito, dalla data di scaden
 
 ### 3. Decreto ingiuntivo
 
-Chiama `decreto_ingiuntivo` con l'importo del credito per verificare:
+Chiama `decreto_ingiuntivo` con l'importo del credito e, per un credito commerciale (imprese/PA, D.Lgs. 231/2002), `tipo_credito='commerciale'`: la bozza chiede allora gli interessi moratori dal giorno successivo alla scadenza, senza costituzione in mora (art. 4, co. 1), e l'importo forfettario di 40 euro per ciascuna fattura non pagata alla scadenza (art. 6, co. 2). Verifica:
 
 - Competenza — Giudice di Pace fino a € 10.000 per i procedimenti instaurati dal 28/2/2023 (riforma Cartabia, D.Lgs. 149/2022); fino a € 5.000 per quelli anteriori. Oltre la soglia, Tribunale.
 - Contributo unificato dovuto
